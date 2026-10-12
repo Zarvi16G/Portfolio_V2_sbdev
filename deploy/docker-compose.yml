@@ -1,0 +1,33 @@
+# /opt/portfolio/docker-compose.yml on the VPS.
+# The image tag comes from /opt/portfolio/.env (TAG=AAAAMMDD-HHMM-sha), written by deploy.sh.
+name: portfolio
+
+services:
+  web:
+    image: ghcr.io/zarvi16g/santiagoboada-portfolio:${TAG:?TAG is missing in /opt/portfolio/.env}
+    container_name: santiagoboada-portfolio
+    restart: unless-stopped
+    # only the host's Nginx reaches it (never 0.0.0.0); if 8081 is taken, see docs/SERVER-SETUP.md
+    ports:
+      - "127.0.0.1:8081:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 128m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - portfolio
+
+# its own network, separate from the finance app
+networks:
+  portfolio:
+    name: portfolio

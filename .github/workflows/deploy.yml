@@ -1,0 +1,105 @@
+# Build the image, push it to GHCR and deploy it to the VPS after a manual approval.
+# Runs on a v* tag push or by hand; never on every push to main.
+# Secrets: VPS_HOST (the VPS IP, not the domain: Cloudflare does not pass SSH), VPS_SSH_KEY, VPS_KNOWN_HOSTS.
+# Every action is pinned to a full commit SHA (the version is in the comment).
+name: deploy
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/zarvi16g/santiagoboada-portfolio
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.23.3
+          cache: npm
+
+      - run: npm ci --no-fund
+      - run: npm audit --audit-level=high
+
+      # AAAAMMDD-HHMM-<short sha> (UTC): the only format deploy.sh accepts
+      - id: tag
+        run: echo "tag=$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: production   # required reviewer: Santiago approves every deploy
+    permissions:
+      contents: read
+    steps:
+      - name: Deploy over SSH (the key can only run /opt/portfolio/deploy.sh)
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^[0-9]{8}-[0-9]{4}-[0-9a-f]{7}$ ]]
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts_vps
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts_vps" \
+            "deploy@${VPS_HOST}" "$TAG"
+
+      - name: Remove the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+      - name: Check the live site (200 + Content-Security-Policy)
+        run: |
+          for _ in 1 2 3 4 5 6; do
+            if curl -sfI https://santiagoboada.dev -o headers.txt \
+              && grep -Eq '^HTTP/[0-9.]+ 200' headers.txt \
+              && grep -qi '^content-security-policy:' headers.txt; then
+              cat headers.txt; exit 0
+            fi
+            sleep 10
+          done
+          echo "santiagoboada.dev did not answer 200 with a Content-Security-Policy header"; cat headers.txt || true; exit 1

@@ -1,56 +1,33 @@
-# Deploy: santiagoboada.dev on the VPS
+# Deploy: santiagoboada.dev
 
-Static site: `npm run build` writes `dist/`, Nginx serves it from `/var/www/santiagoboada.dev` with SSL from Certbot (same setup as `finance.santiagoboada.dev`).
+Docker image on GHCR, deployed by GitHub Actions to the VPS after a manual approval.
+The server setup (done once, by hand) is in [docs/SERVER-SETUP.md](docs/SERVER-SETUP.md).
 
-## 1. Build (on your machine)
-
-```bash
-npm ci
-npm run build          # -> dist/
-npx vite preview       # optional: check the build at http://localhost:4173
+```
+tag v* / Run workflow ──► build: npm ci, npm audit, docker build ──► ghcr.io/zarvi16g/santiagoboada-portfolio:AAAAMMDD-HHMM-sha (private)
+                       ──► deploy (environment "production", you approve) ──► ssh deploy@VPS "<tag>" ──► /opt/portfolio/deploy.sh
+                       ──► check: https://santiagoboada.dev answers 200 with Content-Security-Policy
 ```
 
-## 2. Upload `dist/`
-
-```bash
-ssh <user>@<vps> 'sudo mkdir -p /var/www/santiagoboada.dev && sudo chown <user>: /var/www/santiagoboada.dev'
-rsync -avz --delete dist/ <user>@<vps>:/var/www/santiagoboada.dev/
-```
-
-`--delete` removes old hashed files from earlier builds.
-
-## 3. Nginx (first time only)
-
-```bash
-scp deploy/nginx/santiagoboada.dev.conf <user>@<vps>:/tmp/
-ssh <user>@<vps>
-sudo mv /tmp/santiagoboada.dev.conf /etc/nginx/sites-available/santiagoboada.dev
-sudo ln -s /etc/nginx/sites-available/santiagoboada.dev /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-If the current site already has a server block for `santiagoboada.dev`, disable it in the same step (two blocks with the same `server_name` conflict).
-
-## 4. HTTPS (first time only)
-
-The DNS `A` (and `AAAA`) records for `santiagoboada.dev` and `www` must point to the VPS first.
-
-```bash
-sudo certbot --nginx -d santiagoboada.dev -d www.santiagoboada.dev
-```
-
-Certbot adds the 443 server and the http → https redirect to the same file and renews automatically.
-
-## Updating later
-
-Steps 1 and 2 only. `index.html` is served with `Cache-Control: no-cache`, so a new deploy shows at once; files in `/assets/` have hashed names and are cached for a year.
-
-## What the config does
-
-| Path | Cache | Notes |
+| File | Where it runs | What it does |
 |---|---|---|
-| `/`, `/index.html` | `no-cache` | unknown paths fall back to `index.html` |
-| `/assets/*` | 1 year, immutable | a missing file is a 404, not the page |
-| `*.svg, *.ico, *.png, *.webp, *.json` | 30 days | favicons, the light version images and the 3D font |
+| `Dockerfile` | build | node 22 alpine builds `dist/`; `nginx-unprivileged` (no root, port 8080) serves it. Base images pinned by version + digest |
+| `docker/nginx.conf`, `docker/security-headers.conf` | container | GET/HEAD only, hidden files blocked, gzip, cache (`/assets` 1 year immutable, `index.html` no-cache), CSP and security headers, healthcheck on `/` |
+| `.github/workflows/deploy.yml` | GitHub Actions | build + push to GHCR (`GITHUB_TOKEN`), deploy over SSH with a pinned `known_hosts`, final check. Actions pinned by commit SHA |
+| `deploy/docker-compose.yml` | VPS `/opt/portfolio/` | `127.0.0.1:8081:8080`, read-only, tmpfs, no-new-privileges, cap_drop ALL, 128 MB, rotated logs, own network |
+| `deploy/deploy.sh` | VPS `/opt/portfolio/` | the only command the GitHub key can run: validates the tag, pulls, starts, waits for healthy (60 s), rolls back if not, keeps the last 3 images, logs to `deploy.log` |
+| `deploy/nginx-santiagoboada.conf` | VPS host Nginx | 443 with the GoDaddy certificate, 80 → https, www → santiagoboada.dev, proxy to 127.0.0.1:8081, Cloudflare real IP, HSTS |
 
-Gzip is on for CSS, JS, JSON and SVG. Checked with `nginx -t` and served from a local `nginx:1.27` container.
+Secrets (environment `production`): `VPS_HOST`, `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS`. Nothing secret lives in the repo.
+
+**Release:** `git tag v1.2.3 && git push origin v1.2.3` (or Actions → deploy → Run workflow), then approve the deploy job.
+**Rollback:** `sudo -iu deploy /opt/portfolio/deploy.sh <previous tag>` on the VPS (see docs/SERVER-SETUP.md, step 12).
+
+**Local check of the image:**
+
+```bash
+docker build -t santiagoboada-portfolio:local .
+docker run --rm --read-only --tmpfs /tmp --tmpfs /var/cache/nginx --cap-drop ALL \
+  --security-opt no-new-privileges -p 127.0.0.1:8080:8080 santiagoboada-portfolio:local
+curl -I http://127.0.0.1:8080/
+```

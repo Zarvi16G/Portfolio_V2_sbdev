@@ -7,6 +7,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js'
+import { useTimer } from '../hooks/useTimer'
 
 // The skills die: a gray porcelain rounded cube with a thin wine decal on each face
 // (count, "SKILLS" and the category name in low-relief 3D text). Slow auto-rotate, no zoom or pan.
@@ -203,8 +204,10 @@ function Die({ faces, word, interactive, reduceMotion, apiRef, onSelect }: {
     }
   }, [gl, camera, built, interactive, apiRef])
 
-  useFrame((_, delta) => {
-    const dt = Math.min(delta, 0.05)
+  const timer = useTimer()
+  useFrame(() => {
+    timer.update()
+    const dt = Math.min(timer.getDelta(), 0.05)
     const a = anim.current
     if (a) {
       const t = Math.min(1, (performance.now() - a.t0) / a.dur)

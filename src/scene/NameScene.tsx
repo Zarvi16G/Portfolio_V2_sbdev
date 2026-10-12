@@ -11,6 +11,7 @@ import { useLang } from '../i18n/lang'
 import { crackle } from '../three/crackleTexture'
 import { layoutLine, LINE_GAP } from '../three/nameLayout'
 import { splitEdges } from '../three/splitEdges'
+import { useTimer } from '../hooks/useTimer'
 
 // The name in 3D porcelain: gray crackle front, solid wine sides, two curved lines.
 // Small (~20% of the screen height, 16% on phones), just under the keys.
@@ -143,7 +144,10 @@ function Name({ introStart }: { introStart: React.RefObject<number> }) {
     cam.updateProjectionMatrix()
   }, [camera, size, name, uiLayout])
 
-  useFrame(({ clock }, delta) => {
+  const timer = useTimer()
+  useFrame(() => {
+    timer.update()
+    const delta = timer.getDelta()
     const now = performance.now()
     for (const m of name.letters) {
       const { home, order, rotY, s: hs } = m.userData as LetterData
@@ -158,7 +162,7 @@ function Name({ introStart }: { introStart: React.RefObject<number> }) {
     const g = pivot.current
     if (!g) return
     const k = 1 - Math.exp(-3 * Math.min(delta, 0.05))
-    const idle = reduceMotion ? 0 : Math.sin(clock.elapsedTime * 0.6) * 0.03
+    const idle = reduceMotion ? 0 : Math.sin(timer.getElapsed() * 0.6) * 0.03
     g.rotation.y += (pointer.current.x * 0.22 + idle - g.rotation.y) * k
     g.rotation.x += (-pointer.current.y * 0.14 - g.rotation.x) * k
   })

@@ -5,6 +5,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { codeScreen } from './CodeScreen'
 import { roomBridge } from './roomBridge'
 import { WateringCan } from './WateringCan'
+import { useTimer } from '../hooks/useTimer'
 
 // The cartoon desk setup: desk with a wine LED strip, two code monitors, keyboard, mouse,
 // a small plant, a gaming chair and a person seen from behind with the right hand on the mouse.
@@ -219,11 +220,13 @@ export function DeskSetup({ reduceMotion, blobTex, ref }: { reduceMotion: boolea
   }, [parts, camera, gl])
 
   const q = useMemo(() => new THREE.Quaternion(), [])
-  useFrame(({ clock }) => {
+  const timer = useTimer()
+  useFrame(() => {
     if (reduceMotion) return
-    const now = clock.elapsedTime * 1000
+    timer.update()
+    const elapsed = timer.getElapsed(), now = elapsed * 1000
     parts.screens.forEach((s) => s.update(now))
-    const p = clickAt(clock.elapsedTime)
+    const p = clickAt(elapsed)
     parts.hand.position.y = 0.825 - p * 0.008
     parts.finger.quaternion.copy(parts.fingerQ).premultiply(q.copy(IDENTITY).slerp(FINGER_DOWN, p))
     parts.finger.position.copy(parts.fingerHome).setY(parts.fingerHome.y - p * 0.006)

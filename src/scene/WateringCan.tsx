@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import type { SetupParts } from './DeskSetup'
 import { roomBridge } from './roomBridge'
+import { useTimer } from '../hooks/useTimer'
 
 // A watering can next to the plant: 0-0.4 s grow, 0.4-0.9 s tilt, 0.9-3.6 s pour (a drop every 45 ms),
 // 3.6-4.0 s untilt, 4.0-4.4 s shrink. Then the plant grows 5%.
@@ -54,10 +55,12 @@ export function WateringCan({ parts, reduceMotion }: { parts: SetupParts; reduce
     drops[0].geometry.dispose(); (drops[0].material as THREE.Material).dispose()
   }, [can, drops])
 
-  useFrame((_, delta) => {
+  const timer = useTimer()
+  useFrame(() => {
+    timer.update()
     const w = state.current
     if (!w) return
-    const now = performance.now(), dt = Math.min(0.05, delta)
+    const now = performance.now(), dt = Math.min(0.05, timer.getDelta())
     const t = (now - w.start) / 1000
     can.scale.setScalar(Math.max(0.0001, t < 0.4 ? ease(t / 0.4) : t > 4 ? 1 - ease(clamp01((t - 4) / 0.4)) : 1))
     const tilt = t < 0.4 ? 0 : t < 0.9 ? ease((t - 0.4) / 0.5) : t < 3.6 ? 1 : ease(1 - clamp01((t - 3.6) / 0.4))

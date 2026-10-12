@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SECTIONS, UI, type SectionId } from '../data/content'
 import { prefersReducedMotion } from '../hooks/useReducedMotion'
 import { useLang } from '../i18n/lang'
@@ -17,6 +17,15 @@ export function SectionKeys({ onOpen, disabled = false, hiddenKey = null }: {
   const { t } = useLang()
   const [pressed, setPressed] = useState<SectionId | null>(null)
   const busy = useRef(false)
+
+  // when a section closes, its key shows again and gets the focus back
+  const lastHidden = useRef<SectionId | null>(null)
+  useEffect(() => {
+    if (hiddenKey) { lastHidden.current = hiddenKey; return }
+    const id = lastHidden.current
+    lastHidden.current = null
+    if (id) document.querySelector<HTMLButtonElement>(`.key[data-section="${id}"]`)?.focus({ preventScroll: true })
+  }, [hiddenKey])
 
   const press = (id: SectionId, el: HTMLButtonElement) => {
     if (disabled || busy.current) return

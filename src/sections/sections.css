@@ -1,0 +1,61 @@
+/* ---- Sections: shared ---- */
+:root { --panel-bg: rgba(248, 243, 235, 0.86); --card-bg: rgba(29, 25, 27, 0.035); }
+.eyebrow { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--accent-soft); }
+
+/* "Back to portfolio": top-left (top-right on phones) */
+.close {
+  position: fixed; z-index: 5; left: calc(16px + env(safe-area-inset-left, 0px)); top: calc(16px + env(safe-area-inset-top, 0px));
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--glass); color: var(--fg); font: 500 12px/1 var(--font-ui); letter-spacing: .06em; cursor: pointer;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.close:hover { border-color: var(--accent); }
+.close:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 3px; }
+.close svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+/* ---- Temporary "coming soon" card ---- */
+.section-card {
+  position: fixed; z-index: 4; left: 50%; top: 50%; width: min(520px, calc(100vw - 32px)); box-sizing: border-box;
+  transform: translate(-50%, -50%); padding: 36px 32px; border: 1px solid var(--line); border-radius: 22px;
+  background: linear-gradient(180deg, #9e1240, #4a0820); color: #f6f1f3; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  display: grid; gap: 10px; text-align: center;
+}
+.section-card h2 { margin: 0; font-size: clamp(32px, 5vw, 48px); font-weight: 600; letter-spacing: -0.01em; }
+.section-card .eyebrow { color: #ffc2d4; }
+.section-card p { margin: 0; color: #f0d6de; font-size: 15px; line-height: 1.6; }
+
+/* ---- Skills: die on the left, summary panel on the right ---- */
+.die-box { position: fixed; z-index: 4; left: 0; top: 0; width: 58vw; height: 100dvh; }
+.die-box canvas { display: block; touch-action: none; }
+.panel {
+  position: fixed; z-index: 4; right: 0; top: 0; width: 42vw; min-width: 360px; height: 100dvh; box-sizing: border-box;
+  border-left: 1px solid var(--line); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  min-width: 0; overflow-y: auto; background: var(--panel-bg);
+  padding-inline: 28px; padding-block: calc(28px + env(safe-area-inset-top, 0px)) 32px; display: grid; align-content: start; gap: 20px;
+}
+@media (min-width: 861px) { .panel { min-width: 360px; } }
+.panel-head { display: grid; gap: 6px; }
+.panel-head h1 { margin: 0; font-size: clamp(26px, 3vw, 34px); font-weight: 600; letter-spacing: -0.01em; }
+.panel-head p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; max-width: 46ch; }
+.list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.item {
+  width: 100%; text-align: left; display: grid; gap: 10px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px;
+  background: var(--card-bg); color: var(--fg); font-family: var(--font-ui); cursor: default; transition: border-color .2s, background .2s, transform .2s;
+}
+.item:hover, .item.on { border-color: var(--accent); background: rgba(194, 24, 79, 0.1); }
+.item:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 3px; }
+.item-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.item-top h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.count { font-size: 12px; color: var(--accent-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { padding: 5px 11px; border-radius: 999px; font: 400 12px/1.2 var(--font-ui); color: var(--fg); background: rgba(29, 25, 27, 0.06);
+  border: 1px solid transparent; cursor: help; transition: border-color .15s, background .15s, color .15s; }
+.chip:hover { border-color: var(--accent); background: rgba(194, 24, 79, 0.1); color: var(--accent); }
+@media (max-width: 860px) {
+  .die-box { width: 100vw; height: 44dvh; }
+  .panel { left: 0; right: 0; width: auto; min-width: 0; top: 44dvh; height: 56dvh; border-left: 0; border-top: 1px solid var(--line); padding-inline: 16px; padding-top: 22px; }
+  .close { left: auto; right: calc(16px + env(safe-area-inset-right, 0px)); }
+}
+/* light version: no die, the panel is a centered card */
+.panel.solo { left: 50%; right: auto; top: calc(50% + 22px); transform: translate(-50%, -50%); width: min(720px, calc(100vw - 32px)); min-width: 0;
+  height: auto; max-height: calc(100dvh - 104px); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 30px 70px rgba(29, 25, 27, 0.18); }

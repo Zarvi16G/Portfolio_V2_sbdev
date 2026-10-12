@@ -75,7 +75,8 @@ export const SKILLS_UI = {
   title: { en: 'What I work with', es: 'Con qué trabajo' },
   intro: { en: 'Hover a category to turn the die.', es: 'Pasa el mouse por una categoría para girar el dado.' },
   count: { en: '{n} skills', es: '{n} habilidades' },
-  dieWord: { en: 'SKILLS', es: 'SKILLS' },
+  dieWord: { en: 'SKILLS', es: 'HABILIDADES' },
+  dieLabel: { en: 'Skills die: hover a category card to turn it', es: 'Dado de habilidades: pasa el mouse por una categoría para girarlo' },
 } satisfies Record<string, L>
 
 export const SKILL_CATEGORIES: { id: string; name: L; skills: string[] }[] = [
@@ -86,6 +87,12 @@ export const SKILL_CATEGORIES: { id: string; name: L; skills: string[] }[] = [
   { id: 'devops', name: { en: 'DevOps & Tools', es: 'DevOps y herramientas' }, skills: ['Git', 'GitHub Actions', 'Docker', 'Vercel'] },
   { id: 'design', name: { en: 'Design', es: 'Diseño' }, skills: ['Figma', 'UI / UX', 'Motion'] },
 ]
+
+// ---- Temporary card for the sections still to build ----
+export const PLACEHOLDER = {
+  eyebrow: { en: 'Section', es: 'Sección' },
+  text: { en: 'This section is coming soon.', es: 'Esta sección llegará pronto.' },
+}
 
 // ---- Projects ----
 export const PROJECTS = {

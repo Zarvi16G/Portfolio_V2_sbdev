@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
-import { UI, type SectionId } from '../data/content'
+import { SECTIONS, UI, type SectionId } from '../data/content'
 import { prefersReducedMotion } from '../hooks/useReducedMotion'
+import { zoomOf } from '../hooks/useUiLayout'
 import { useLang } from '../i18n/lang'
 import type { KeyRect } from '../ui/SectionKeys'
 import { About } from './About'
@@ -47,8 +48,9 @@ function zoomPortfolio(open: boolean, origin?: KeyRect) {
 // a box (panel / card) grows out of the key's rect, or shrinks back into it
 function morph(card: HTMLElement, from: KeyRect, open: boolean, base = 'translate(-50%, -50%)') {
   const to = card.getBoundingClientRect()
+  const z = zoomOf(card)   // TV tier: translations inside a zoomed box are zoomed too
   const sx = from.width / to.width, sy = from.height / to.height
-  const dx = from.left + from.width / 2 - (to.left + to.width / 2), dy = from.top + from.height / 2 - (to.top + to.height / 2)
+  const dx = (from.left + from.width / 2 - (to.left + to.width / 2)) / z, dy = (from.top + from.height / 2 - (to.top + to.height / 2)) / z
   const small = { transform: `${base} translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, opacity: open ? 0.4 : 0 }
   const big = { transform: base, opacity: 1 }
   return card.animate(open ? [small, big] : [big, small], { duration: zoomMs(), easing: EASE, fill: open ? 'none' : 'forwards' })
@@ -128,7 +130,7 @@ export function SectionHost({ active, phase, light, onPhase, onClosed }: {
   if (!active) return null
 
   return (
-    <div ref={root} className="section-host">
+    <div ref={root} className="section-host" role="dialog" aria-modal="true" aria-label={t(SECTIONS.find((s) => s.id === active.id)!.label)}>
       <button ref={back} className="close" type="button" onClick={close} hidden={phase === 'closing'}>
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" /></svg>
         {t(UI.back)}

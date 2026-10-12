@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { NAME_LINES, SECTIONS, type SectionId } from './data/content'
+import { SECTIONS, type SectionId } from './data/content'
 import { useLang } from './i18n/lang'
 import { watchFirstFrames } from './perf/lightMode'
 import { useQuality } from './perf/quality'
@@ -8,13 +8,9 @@ import { RoomCanvas } from './scene/Room'
 import { SectionHost, type ActiveSection, type SectionPhase } from './sections/SectionHost'
 import { CategoryTiles } from './ui/CategoryTiles'
 import { LangToggle } from './ui/LangToggle'
+import { LightName } from './ui/LightName'
 import { SectionKeys, type KeyRect } from './ui/SectionKeys'
 import { SpeechBubbles } from './ui/SpeechBubble'
-
-// Light version: no WebGL at all, the name as HTML text in the same place.
-function LightName() {
-  return <h1 className="light-name" aria-label="Santiago Boada.dev">{NAME_LINES.map((l) => <span key={l}>{l}</span>)}</h1>
-}
 
 export default function App() {
   const { light, reason, pinned, goLight } = useQuality()
@@ -35,11 +31,13 @@ export default function App() {
 
   // keys, tiles and the language pill fade out while a section is open, and come back as it closes
   const uiHidden = !!active && phase !== 'closing'
+  // the 3D behind rests once the section is fully open
+  const paused = phase === 'open'
 
   return (
     <>
-      {light ? <div className="light-bg" aria-hidden="true" /> : <RoomCanvas />}
-      {light ? <LightName /> : <><h1 className="sr-only">Santiago Boada.dev</h1><NameCanvas /></>}
+      {light ? <div className="light-bg" aria-hidden="true" /> : <RoomCanvas paused={paused} />}
+      {light ? <LightName /> : <><h1 className="sr-only">Santiago Boada.dev</h1><NameCanvas paused={paused} /></>}
       <SectionKeys onOpen={open} disabled={uiHidden} hiddenKey={active?.id ?? null} />
       <CategoryTiles hidden={uiHidden} />
       <LangToggle placement="corner" hidden={uiHidden} />

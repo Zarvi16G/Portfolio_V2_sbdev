@@ -1,0 +1,12 @@
+/* ---- TV tier (>= 1920px): scale the UI with zoom. Inside a zoomed box, vw / vh / dvh are zoomed too,
+   so every viewport unit below is divided by --z to keep the same size on screen. ---- */
+@media (min-width: 1920px) {
+  .keys, .tiles, .lang--corner, .close, .projects, .panel { zoom: var(--z); }
+  .tiles { bottom: calc(6vh / var(--z) + env(safe-area-inset-bottom, 0px)); }
+  .projects { width: min(1080px, calc((100vw - 32px) / var(--z))); max-height: calc((100dvh - 104px) / var(--z)); }
+  .panel { width: calc(42vw / var(--z)); height: calc(100dvh / var(--z)); }
+  .panel.solo { width: min(720px, calc((100vw - 32px) / var(--z))); height: auto; max-height: calc((100dvh - 104px) / var(--z)); }
+  .xp-stage { height: clamp(440px, calc(66dvh / var(--z)), 640px); }
+  /* bubbles are placed from JS in screen px: scale them around their anchor instead */
+  .bubble { scale: var(--z); transform-origin: 0 0; }
+}

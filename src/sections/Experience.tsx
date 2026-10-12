@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { EXPERIENCE, type Checkpoint } from '../data/content'
 import { useReducedMotion } from '../hooks/useReducedMotion'
+import { zoomOf } from '../hooks/useUiLayout'
 import { useLang } from '../i18n/lang'
 import { CoinFaces } from '../ui/Coin'
 
@@ -64,7 +65,10 @@ export function Experience() {
   const place = useCallback(() => {
     const i = open, v = view.current, p = pop.current, b = board.current, c = i === null ? null : coins.current[i]
     if (!v || !p || !b || !c) return
-    const sr = v.getBoundingClientRect(), cr = c.getBoundingClientRect(), br = b.getBoundingClientRect()
+    // work in the view's own units (TV tier: the view is zoomed, screen rects are not)
+    const z = zoomOf(v)
+    const local = (r: DOMRect) => ({ left: r.left / z, top: r.top / z, right: r.right / z, bottom: r.bottom / z, width: r.width / z, height: r.height / z })
+    const sr = local(v.getBoundingClientRect()), cr = local(c.getBoundingClientRect()), br = local(b.getBoundingClientRect())
     const pw = p.offsetWidth, ph = p.offsetHeight
     let left: number, top: number
     if (sr.width >= 900) {

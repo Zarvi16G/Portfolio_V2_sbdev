@@ -20,10 +20,12 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); ove
   -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
 #root { height: 100%; }
 
-/* TV tier: scale the UI */
-@media (min-width: 1920px) { html { font-size: 125%; } }
-@media (min-width: 2560px) { html { font-size: 150%; } }
-@media (min-width: 3840px) { html { font-size: 200%; } }
+/* TV tier: the UI (keys, tiles, pill, bubbles, sections) scales by --z = 1.25 / 1.5 / 2 at 1920 / 2560 / 3840px.
+   The reference CSS is in px, so the scale is applied with `zoom` (see tv.css), not with html font-size. */
+:root { --z: 1; }
+@media (min-width: 1920px) { :root { --z: 1.25; } }
+@media (min-width: 2560px) { :root { --z: 1.5; } }
+@media (min-width: 3840px) { :root { --z: 2; } }
 
 /* ---- Language toggle: EN | ES pill, top-right ---- */
 .lang {
@@ -47,12 +49,11 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); ove
 /* ---- Light version: CSS background + HTML name ---- */
 .light-bg { position: fixed; inset: 0; z-index: 0;
   background: radial-gradient(ellipse at 50% 45%, var(--bg) 55%, #e6d8bf 120%); }
-.light-name { position: fixed; z-index: 1; left: 50%; transform: translateX(-50%); top: var(--name-top, 112px);
-  margin: 0; text-align: center; font: 700 calc(var(--name-h, 20vh) * 0.42)/1.12 var(--font-ui); letter-spacing: -0.01em;
+.light-name { position: fixed; z-index: 1; left: 50%; transform: translateX(-50%); top: 112px;   /* top and size set by LightName */
+  margin: 0; text-align: center; font: 700 8.9vh/1.12 var(--font-ui); letter-spacing: -0.01em;
   color: var(--porcelain); white-space: nowrap; cursor: default; user-select: none;
   text-shadow: 1px 1px 0 #8c0b2f, 2px 2px 0 #82092b, 3px 3px 0 #780828, 4px 4px 0 #6e0725, 6px 8px 14px rgba(0,0,0,.18); }
 .light-name span { display: block; }
-@media (max-width: 639px) { .light-name { --name-h: 16vh; } }
 
 /* ---- Dev-only diagnostics chip (removed from production builds) ---- */
 .dev-chip { position: fixed; z-index: 9; left: 12px; bottom: 12px; padding: 6px 10px; border-radius: 8px;

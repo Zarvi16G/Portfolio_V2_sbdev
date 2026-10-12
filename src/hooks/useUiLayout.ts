@@ -18,3 +18,6 @@ export function useUiLayoutVersion() {
   }, [])
   return v
 }
+
+// The UI zoom of an element (TV tier); positions measured on screen are divided by it before use inside.
+export const zoomOf = (el: Element | null) => (el ? parseFloat(getComputedStyle(el).zoom) || 1 : 1)

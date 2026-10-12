@@ -170,7 +170,8 @@ function Name({ introStart }: { introStart: React.RefObject<number> }) {
   )
 }
 
-export function NameCanvas() {
+// paused: a section covers the name (it has faded out), so it stops rendering and leaves the tab order
+export function NameCanvas({ paused = false }: { paused?: boolean }) {
   const { t } = useLang()
   const introStart = useRef(performance.now())
   const replay = () => { introStart.current = performance.now() }
@@ -181,10 +182,13 @@ export function NameCanvas() {
       role="button"
       tabIndex={0}
       aria-label={t(UI.nameLabel)}
+      inert={paused}
+      onMouseDown={(e) => e.preventDefault()}   // a mouse click replays the intro without leaving a focus ring
       onClick={replay}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); replay() } }}
     >
       <Canvas
+        frameloop={paused ? 'never' : 'always'}
         dpr={[1, 2]}
         gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
         camera={{ fov: 30, near: 0.1, far: 200 }}

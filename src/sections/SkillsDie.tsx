@@ -10,10 +10,10 @@ import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js'
 import { useTimer } from '../hooks/useTimer'
 
 // The skills die: a gray porcelain rounded cube with a thin wine decal on each face
-// (count, "SKILLS" and the category name in low-relief 3D text). Slow auto-rotate, no zoom or pan.
+// (the face number 1-6, in the order of the categories, and the category name in low-relief 3D text). Slow auto-rotate, no zoom or pan.
 // Hovering a category card turns its face to the camera; clicking a face selects its card.
 
-export type DieFace = { title: string; count: number }
+export type DieFace = { title: string; n: number }   // n: face number 1-6 (category order)
 export type DieApi = { faceHover: (i: number) => void; activate: (i: number) => void }
 
 const FONT_URL = '/fonts/Poppins_Bold.typeface.json'
@@ -93,10 +93,12 @@ function text3D(font: Font, str: string, size: number, maxW: number, mat: THREE.
   return m
 }
 
-type Anim = { t0: number; dur: number; q0: THREE.Quaternion; q1: THREE.Quaternion; then?: () => void }
+// face: the face being brought to the camera; its target is recomputed every frame from the live camera
+// (the controls' damping keeps the camera gliding a moment after auto-rotate stops)
+type Anim = { t0: number; dur: number; q0: THREE.Quaternion; face: number; then?: () => void }
 
-function Die({ faces, word, interactive, reduceMotion, apiRef, onSelect }: {
-  faces: DieFace[]; word: string; interactive: boolean; reduceMotion: boolean
+function Die({ faces, interactive, reduceMotion, apiRef, onSelect }: {
+  faces: DieFace[]; interactive: boolean; reduceMotion: boolean
   apiRef: React.RefObject<DieApi | null>; onSelect: (i: number) => void
 }) {
   const font = useLoader(FontLoader, FONT_URL)
@@ -106,6 +108,7 @@ function Die({ faces, word, interactive, reduceMotion, apiRef, onSelect }: {
   const anim = useRef<Anim | null>(null)
   const hovered = useRef(-1), panelHover = useRef(-1), selected = useRef(-1)
   const idleTimer = useRef(0)
+  const hold = useRef(-1)   // face kept looking at the camera after the turn (while its card is hovered / just clicked)
 
   useEffect(() => () => built.dispose(), [built])
 
@@ -116,19 +119,18 @@ function Die({ faces, word, interactive, reduceMotion, apiRef, onSelect }: {
     return () => { scene.environment = null; env.dispose(); pmrem.dispose() }
   }, [gl, scene])
 
-  // the decals' text: count, "SKILLS" and the category name (rebuilt when the language changes)
+  // the decals' text: the face number and the category name (rebuilt when the language changes)
   useEffect(() => {
     const maxW = CARD * 0.78
     built.panels.forEach((p, i) => {
       p.content.children.slice().forEach((c) => { (c as THREE.Mesh).geometry.dispose(); p.content.remove(c) })
       const d = faces[i]
       if (!d) return
-      const num = text3D(font, String(d.count), 0.95, maxW, built.numMat); num.position.y = 0.42; p.content.add(num)
-      const lbl = text3D(font, word, 0.16, maxW, built.textMat); lbl.position.y = -0.18; p.content.add(lbl)
+      const num = text3D(font, String(d.n), 0.95, maxW, built.numMat); num.position.y = 0.3; p.content.add(num)
       const lines = titleLines(d.title)
-      lines.forEach((l, k) => { const t = text3D(font, l, 0.26, maxW, built.textMat); t.position.y = -0.62 - k * 0.34 + (lines.length - 1) * 0.1; p.content.add(t) })
+      lines.forEach((l, k) => { const t = text3D(font, l, 0.26, maxW, built.textMat); t.position.y = -0.55 - k * 0.34 + (lines.length - 1) * 0.12; p.content.add(t) })
     })
-  }, [font, faces, word, built])
+  }, [font, faces, built])
 
   // narrow screens: step back so the whole cube fits
   useLayoutEffect(() => {
@@ -156,18 +158,22 @@ function Die({ faces, word, interactive, reduceMotion, apiRef, onSelect }: {
       faceHover(i) {
         panelHover.current = i
         clearTimeout(idleTimer.current)
-        if (i < 0) { idleTimer.current = window.setTimeout(() => { if (!anim.current) setAutoRotate(true) }, 2500); return }
+        if (i < 0) { hold.current = -1; idleTimer.current = window.setTimeout(() => { if (!anim.current) setAutoRotate(true) }, 2500); return }
         setAutoRotate(false)
-        anim.current = { t0: performance.now(), dur: reduceMotion ? 1 : 700, q0: built.group.quaternion.clone(), q1: alignQuat(i) }
+        hold.current = -1
+        anim.current = { t0: performance.now(), dur: reduceMotion ? 1 : 700, q0: built.group.quaternion.clone(), face: i, then: () => { hold.current = i } }
       },
       activate(i) {
         setAutoRotate(false)
-        anim.current = { t0: performance.now(), dur: reduceMotion ? 1 : 600, q0: built.group.quaternion.clone(), q1: alignQuat(i), then: () => { selected.current = i; onSelect(i) } }
+        hold.current = -1
+        anim.current = { t0: performance.now(), dur: reduceMotion ? 1 : 600, q0: built.group.quaternion.clone(), face: i, then: () => { selected.current = i; hold.current = i; onSelect(i) } }
         clearTimeout(idleTimer.current)
-        idleTimer.current = window.setTimeout(() => { if (!anim.current && panelHover.current < 0) setAutoRotate(true) }, 4000)
+        idleTimer.current = window.setTimeout(() => { if (!anim.current && panelHover.current < 0) { hold.current = -1; setAutoRotate(true) } }, 4000)
       },
     }
     apiRef.current = api
+    // development only: lets the tests read the die's state (stripped from production builds)
+    if (import.meta.env.DEV) (window as unknown as { __die: unknown }).__die = { group: built.group, camera, controls: controls.current, faces: FACES, labels: faces }
     return () => { apiRef.current = null; clearTimeout(idleTimer.current) }
   })
 
@@ -184,7 +190,7 @@ function Die({ faces, word, interactive, reduceMotion, apiRef, onSelect }: {
       return !hit || hit.object === built.die ? -1 : (hit.object.userData.panel as number)
     }
     let downAt: [number, number] | null = null
-    const down = (e: PointerEvent) => { downAt = [e.clientX, e.clientY] }
+    const down = (e: PointerEvent) => { downAt = [e.clientX, e.clientY]; hold.current = -1 }   // grabbing the die releases the hold
     const up = (e: PointerEvent) => {
       if (!downAt || !interactive) return
       const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]); downAt = null
@@ -211,8 +217,11 @@ function Die({ faces, word, interactive, reduceMotion, apiRef, onSelect }: {
     const a = anim.current
     if (a) {
       const t = Math.min(1, (performance.now() - a.t0) / a.dur)
-      built.group.quaternion.slerpQuaternions(a.q0, a.q1, ease(t))
+      built.group.quaternion.slerpQuaternions(a.q0, alignQuat(a.face), ease(t))
       if (t >= 1) { anim.current = null; a.then?.() }
+    } else if (hold.current >= 0) {
+      // keep the face square to the camera while the damping settles
+      built.group.quaternion.slerp(alignQuat(hold.current), 1 - Math.exp(-14 * dt))
     }
     // hover: the sticker lifts off the face a little and grows
     built.panels.forEach((p, i) => {

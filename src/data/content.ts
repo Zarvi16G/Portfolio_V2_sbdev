@@ -91,7 +91,6 @@ export const SKILLS_UI = {
   title: { en: 'What I work with', es: 'Con qué trabajo' },
   intro: { en: 'Hover a category to turn the die.', es: 'Pasa el mouse por una categoría para girar el dado.' },
   count: { en: '{n} skills', es: '{n} habilidades' },
-  dieWord: { en: 'SKILLS', es: 'HABILIDADES' },
   dieLabel: { en: 'Skills die: hover a category card to turn it', es: 'Dado de habilidades: pasa el mouse por una categoría para girarlo' },
 } satisfies Record<string, L>
 

@@ -15,7 +15,8 @@ export function Skills({ interactive, light }: { interactive: boolean; light: bo
   const [selected, setSelected] = useState(-1)
   const listRefs = useRef<(HTMLElement | null)[]>([])
 
-  const faces = useMemo(() => SKILL_CATEGORIES.map((c) => ({ title: t(c.name), count: c.skills.length })), [t])
+  // face i of the die shows number i + 1 (the order of the table)
+  const faces = useMemo(() => SKILL_CATEGORIES.map((c, i) => ({ title: t(c.name), n: i + 1 })), [t])
 
   const select = (i: number) => {
     setSelected(i)
@@ -26,7 +27,7 @@ export function Skills({ interactive, light }: { interactive: boolean; light: bo
     <>
       {!light && (
         <div className="die-box" role="img" aria-label={t(SKILLS_UI.dieLabel)}>
-          <Suspense fallback={null}><SkillsDie faces={faces} word={t(SKILLS_UI.dieWord)} interactive={interactive} reduceMotion={reduceMotion} apiRef={die} onSelect={select} /></Suspense>
+          <Suspense fallback={null}><SkillsDie faces={faces} interactive={interactive} reduceMotion={reduceMotion} apiRef={die} onSelect={select} /></Suspense>
         </div>
       )}
       <section className={`panel${light ? ' solo' : ''}`} aria-labelledby="skills-title">

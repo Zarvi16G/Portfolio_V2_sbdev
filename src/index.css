@@ -1,0 +1,58 @@
+/* Base: tokens, page and the shared glass pill. Each UI part keeps its CSS next to it in later phases. */
+:root {
+  --bg: #f2e8d5;              /* cream */
+  --fg: #1d191b;
+  --muted: #7d7177;
+  --line: rgba(29, 25, 27, 0.14);
+  --glass: rgba(250, 246, 239, 0.72);
+  --panel: rgba(248, 243, 235, 0.9);
+  --accent: #9e1240;           /* wine */
+  --accent-soft: #b3154a;      /* soft wine on light */
+  --accent-on-dark: #e0577f;   /* soft wine on dark */
+  --porcelain: #9ea2ab;
+  --wine-side: #8c0b2f;
+  --font-ui: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); overflow: hidden;
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+#root { height: 100%; }
+
+/* TV tier: scale the UI */
+@media (min-width: 1920px) { html { font-size: 125%; } }
+@media (min-width: 2560px) { html { font-size: 150%; } }
+@media (min-width: 3840px) { html { font-size: 200%; } }
+
+/* ---- Language toggle: EN | ES pill, top-right ---- */
+.lang {
+  position: fixed; z-index: 3; right: 16px; top: calc(16px + env(safe-area-inset-top, 0px));
+  display: flex; align-items: center; padding: 4px 6px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  font: 600 0.75rem/1 var(--font-ui); letter-spacing: .06em; transition: opacity .3s;
+}
+.lang.is-hidden { opacity: 0; pointer-events: none; }
+.lang-opt { display: flex; align-items: center; }
+.lang-sep { color: var(--muted); opacity: .6; padding: 0 1px; }
+.lang button { border: 0; background: none; cursor: pointer; padding: 6px 8px; border-radius: 999px;
+  font: inherit; letter-spacing: inherit; color: var(--muted); transition: color .2s; }
+.lang button:hover { color: var(--fg); }
+.lang button[aria-pressed="true"] { color: var(--accent); }
+.lang button:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 1px; }
+
+/* ---- Light version: CSS background + HTML name ---- */
+.light-bg { position: fixed; inset: 0; z-index: 0;
+  background: radial-gradient(ellipse at 50% 45%, var(--bg) 55%, #e6d8bf 120%); }
+.light-name { position: fixed; z-index: 1; left: 50%; transform: translateX(-50%); top: var(--name-top, 112px);
+  margin: 0; text-align: center; font: 700 calc(var(--name-h, 20vh) * 0.42)/1.12 var(--font-ui); letter-spacing: -0.01em;
+  color: var(--porcelain); white-space: nowrap; cursor: default; user-select: none;
+  text-shadow: 1px 1px 0 #8c0b2f, 2px 2px 0 #82092b, 3px 3px 0 #780828, 4px 4px 0 #6e0725, 6px 8px 14px rgba(0,0,0,.18); }
+.light-name span { display: block; }
+@media (max-width: 639px) { .light-name { --name-h: 16vh; } }
+
+/* ---- Dev-only diagnostics chip (removed from production builds) ---- */
+.dev-chip { position: fixed; z-index: 9; left: 12px; bottom: 12px; padding: 6px 10px; border-radius: 8px;
+  background: rgba(29,25,27,.82); color: #f4eff2; font: 500 11px/1.4 ui-monospace, monospace; pointer-events: none; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

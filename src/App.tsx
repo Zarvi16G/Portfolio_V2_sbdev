@@ -1,6 +1,9 @@
+import { useEffect } from 'react'
 import { NAME_LINES, SECTIONS } from './data/content'
 import { useLang } from './i18n/lang'
+import { watchFirstFrames } from './perf/lightMode'
 import { useQuality } from './perf/quality'
+import { RoomCanvas } from './scene/Room'
 import { LangToggle } from './ui/LangToggle'
 
 // Light version: no WebGL at all, the name as HTML text in the same place.
@@ -9,12 +12,18 @@ function LightName() {
 }
 
 export default function App() {
-  const { light, reason } = useQuality()
+  const { light, reason, pinned, goLight } = useQuality()
   const { lang, t } = useLang()
+
+  // a slow start (< 24 fps over the first 2 s) switches to the light version
+  useEffect(() => {
+    if (light || pinned) return
+    return watchFirstFrames(goLight)
+  }, [light, pinned, goLight])
 
   return (
     <>
-      {light ? <div className="light-bg" aria-hidden="true" /> : null}
+      {light ? <div className="light-bg" aria-hidden="true" /> : <RoomCanvas />}
       {light ? <LightName /> : <h1 className="sr-only">Santiago Boada.dev</h1>}
       <LangToggle />
       {import.meta.env.DEV && (

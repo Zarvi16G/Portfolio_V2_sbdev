@@ -6,15 +6,16 @@
 const SESSION_KEY = 'sb-light'
 
 export type LightReason = 'forced' | 'no-webgl2' | 'low-memory' | 'few-cores' | 'reduced-data' | 'slow-fps'
-export type Quality = { light: boolean; reason: LightReason | null }
+// pinned: the URL forced a mode, so the fps watchdog stays off
+export type Quality = { light: boolean; reason: LightReason | null; pinned: boolean }
 
 export function detectQuality(): Quality {
   const force = new URLSearchParams(location.search).get('light')
-  if (force === '1') return { light: true, reason: 'forced' }
-  if (force === '0') return { light: false, reason: null }
+  if (force === '1') return { light: true, reason: 'forced', pinned: true }
+  if (force === '0') return { light: false, reason: null, pinned: true }
 
   try {
-    if (sessionStorage.getItem(SESSION_KEY) === 'slow-fps') return { light: true, reason: 'slow-fps' }
+    if (sessionStorage.getItem(SESSION_KEY) === 'slow-fps') return { light: true, reason: 'slow-fps', pinned: false }
   } catch { /* storage blocked */ }
 
   let gl2 = false
@@ -24,13 +25,13 @@ export function detectQuality(): Quality {
     gl2 = !!gl
     gl?.getExtension('WEBGL_lose_context')?.loseContext()
   } catch { /* no WebGL */ }
-  if (!gl2) return { light: true, reason: 'no-webgl2' }
+  if (!gl2) return { light: true, reason: 'no-webgl2', pinned: false }
 
   const nav = navigator as Navigator & { deviceMemory?: number }
-  if (nav.deviceMemory !== undefined && nav.deviceMemory <= 2) return { light: true, reason: 'low-memory' }
-  if (nav.hardwareConcurrency !== undefined && nav.hardwareConcurrency <= 2) return { light: true, reason: 'few-cores' }
-  if (matchMedia('(prefers-reduced-data: reduce)').matches) return { light: true, reason: 'reduced-data' }
-  return { light: false, reason: null }
+  if (nav.deviceMemory !== undefined && nav.deviceMemory <= 2) return { light: true, reason: 'low-memory', pinned: false }
+  if (nav.hardwareConcurrency !== undefined && nav.hardwareConcurrency <= 2) return { light: true, reason: 'few-cores', pinned: false }
+  if (matchMedia('(prefers-reduced-data: reduce)').matches) return { light: true, reason: 'reduced-data', pinned: false }
+  return { light: false, reason: null, pinned: false }
 }
 
 // Measures the average frame rate over the first 2 s; calls onSlow if it is under 24 fps.

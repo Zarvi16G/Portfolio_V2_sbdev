@@ -88,12 +88,6 @@ export const SKILL_CATEGORIES: { id: string; name: L; skills: string[] }[] = [
   { id: 'design', name: { en: 'Design', es: 'Diseño' }, skills: ['Figma', 'UI / UX', 'Motion'] },
 ]
 
-// ---- Temporary card for the sections still to build ----
-export const PLACEHOLDER = {
-  eyebrow: { en: 'Section', es: 'Sección' },
-  text: { en: 'This section is coming soon.', es: 'Esta sección llegará pronto.' },
-}
-
 // ---- Projects ----
 export const PROJECTS = {
   eyebrow: { en: 'Projects', es: 'Proyectos' },
@@ -286,8 +280,10 @@ export const CONTACT = {
   eyebrow: { en: 'Contact', es: 'Contacto' },
   status: { en: 'Open to work · Bogotá, remote or on-site', es: 'Disponible · Bogotá, remoto o presencial' },
   dear: { en: 'DEAR RECRUITER,', es: 'ESTIMADO RECLUTADOR,' },
-  title: { en: "Let's talk.", es: 'Hablemos.' },
+  letterTitle: { en: "Let's talk.", es: 'Hablemos.' },
   text: { en: "Write me about a role or a project. I'll get back to you soon.", es: 'Escríbeme sobre un cargo o un proyecto. Te respondo pronto.' },
   copy: { en: 'Copy', es: 'Copiar' },
   copied: { en: 'Copied', es: 'Copiado' },
+  copyFallback: { en: 'Press Ctrl+C', es: 'Presiona Ctrl+C' },
+  title: { en: 'Contact', es: 'Contacto' },
 }

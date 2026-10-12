@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
-import { SECTIONS, UI, type SectionId } from '../data/content'
+import { UI, type SectionId } from '../data/content'
 import { prefersReducedMotion } from '../hooks/useReducedMotion'
 import { useLang } from '../i18n/lang'
 import type { KeyRect } from '../ui/SectionKeys'
-import { Placeholder } from './Placeholder'
+import { About } from './About'
+import { Contact } from './Contact'
+import { Experience } from './Experience'
+import { Projects } from './Projects'
 import { Skills } from './Skills'
 
 // Open: the room and the name zoom softly toward the pressed key and fade; the section grows out
@@ -80,7 +83,7 @@ export function SectionHost({ active, phase, light, onPhase, onClosed }: {
       panel?.animate([{ opacity: 0, transform: innerWidth > 860 ? 'translateX(40px)' : 'translateY(40px)' }, { opacity: 1, transform: 'none' }],
         { duration: ms * 0.7, delay: ms * 0.35, easing: EASE, fill: 'backwards' })
     } else {
-      const card = root.current.querySelector<HTMLElement>('.section-card, .panel')
+      const card = root.current.querySelector<HTMLElement>('.projects, .panel')
       if (card) { card.scrollTop = 0; morph(card, from, true) }
     }
     timer.current = window.setTimeout(() => {
@@ -107,7 +110,7 @@ export function SectionHost({ active, phase, light, onPhase, onClosed }: {
         { duration: ms * 0.5, easing: EASE, fill: 'forwards' })
       if (box) anim = box.animate([px(rectOf(box)), px(to)], { duration: ms, easing: EASE, fill: 'forwards' })
     } else {
-      const card = root.current.querySelector<HTMLElement>('.section-card, .panel')
+      const card = root.current.querySelector<HTMLElement>('.projects, .panel')
       if (card) anim = morph(card, to, false)
     }
     if (anim) anim.finished.then(done, done)
@@ -123,15 +126,18 @@ export function SectionHost({ active, phase, light, onPhase, onClosed }: {
   }, [phase, close])
 
   if (!active) return null
-  const label = SECTIONS.find((s) => s.id === active.id)!.label
 
   return (
     <div ref={root} className="section-host">
       <button ref={back} className="close" type="button" onClick={close} hidden={phase === 'closing'}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" /></svg>
         {t(UI.back)}
       </button>
-      {isSkills ? <Skills interactive={phase === 'open'} light={light} /> : <Placeholder title={t(label)} />}
+      {active.id === 'skills' && <Skills interactive={phase === 'open'} light={light} />}
+      {active.id === 'projects' && <Projects />}
+      {active.id === 'experience' && <Experience />}
+      {active.id === 'about' && <About />}
+      {active.id === 'contact' && <Contact openDelay={zoomMs() * 0.7} />}
     </div>
   )
 }

@@ -13,17 +13,6 @@
 .close:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 3px; }
 .close svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
 
-/* ---- Temporary "coming soon" card ---- */
-.section-card {
-  position: fixed; z-index: 4; left: 50%; top: 50%; width: min(520px, calc(100vw - 32px)); box-sizing: border-box;
-  transform: translate(-50%, -50%); padding: 36px 32px; border: 1px solid var(--line); border-radius: 22px;
-  background: linear-gradient(180deg, #9e1240, #4a0820); color: #f6f1f3; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  display: grid; gap: 10px; text-align: center;
-}
-.section-card h2 { margin: 0; font-size: clamp(32px, 5vw, 48px); font-weight: 600; letter-spacing: -0.01em; }
-.section-card .eyebrow { color: #ffc2d4; }
-.section-card p { margin: 0; color: #f0d6de; font-size: 15px; line-height: 1.6; }
-
 /* ---- Skills: die on the left, summary panel on the right ---- */
 .die-box { position: fixed; z-index: 4; left: 0; top: 0; width: 58vw; height: 100dvh; }
 .die-box canvas { display: block; touch-action: none; }

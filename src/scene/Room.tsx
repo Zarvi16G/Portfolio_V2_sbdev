@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { useReducedMotion } from '../hooks/useReducedMotion'
+import { useUiLayoutVersion } from '../hooks/useUiLayout'
 import { blobTexture, DeskSetup, type SetupParts } from './DeskSetup'
 
 // The room: textured cream wall on top, warm oak plank floor below, the desk setup on the floor.
@@ -77,6 +78,7 @@ function tilesTopFraction(h: number) {
 
 function RoomScene() {
   const reduceMotion = useReducedMotion()
+  const uiLayout = useUiLayoutVersion()
   const { gl, scene, camera, size, viewport } = useThree()
   const setupRef = useRef<SetupParts>(null)
 
@@ -110,7 +112,7 @@ function RoomScene() {
     // narrow screens: shrink the setup so it fits the width
     const visibleW = 2 * (CAM_D - 0.6) * tanV * cam.aspect
     setupRef.current?.setup.scale.setScalar(THREE.MathUtils.clamp((visibleW * 0.8) / 2.1, 0.5, 1))
-  }, [camera, size, viewport.dpr, uniforms, reduceMotion])
+  }, [camera, size, viewport.dpr, uniforms, reduceMotion, uiLayout])
 
   return (
     <>

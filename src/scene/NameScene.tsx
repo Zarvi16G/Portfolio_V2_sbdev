@@ -6,6 +6,7 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js'
 import { NAME_LINES, UI } from '../data/content'
 import { useReducedMotion } from '../hooks/useReducedMotion'
+import { useUiLayoutVersion } from '../hooks/useUiLayout'
 import { useLang } from '../i18n/lang'
 import { crackle } from '../three/crackleTexture'
 import { layoutLine, LINE_GAP } from '../three/nameLayout'
@@ -92,6 +93,7 @@ function keysBottom() {
 function Name({ introStart }: { introStart: React.RefObject<number> }) {
   const font = useLoader(FontLoader, FONT_URL)
   const reduceMotion = useReducedMotion()
+  const uiLayout = useUiLayoutVersion()
   const { gl, scene, camera, size } = useThree()
   const name = useMemo(() => buildName(font), [font])
   const pivot = useRef<THREE.Group>(null)
@@ -139,7 +141,7 @@ function Name({ introStart }: { introStart: React.RefObject<number> }) {
     cam.position.set(0, nameLift, fitDist)
     cam.lookAt(0, nameLift, 0)
     cam.updateProjectionMatrix()
-  }, [camera, size, name])
+  }, [camera, size, name, uiLayout])
 
   useFrame(({ clock }, delta) => {
     const now = performance.now()

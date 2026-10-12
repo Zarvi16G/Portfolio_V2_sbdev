@@ -1,0 +1,80 @@
+/* ---- Icons ---- */
+svg.ico { fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ico .dot { fill: #e0577f; stroke: none; }
+
+/* ---- Section keys: keycaps in a row at the top ---- */
+.keys {
+  position: fixed; z-index: 3; left: 50%; transform: translateX(-50%); top: calc(18px + env(safe-area-inset-top, 0px));
+  display: grid; grid-template-columns: repeat(5, auto); gap: 14px; transition: opacity .3s;
+}
+.key-base { display: block; padding: 5px 5px 9px; border-radius: 16px; background: linear-gradient(180deg, #4a0820, #2a0412); box-shadow: 0 10px 22px rgba(0, 0, 0, .28); }
+.key {
+  display: flex; align-items: center; justify-content: center; gap: 9px; position: relative; border: 0; cursor: pointer; padding: 12px 18px; border-radius: 12px; min-width: 120px;
+  background: linear-gradient(180deg, #2c2a30, #1b1a1d); color: #f4eff2;
+  font: 600 14px/1 var(--font-ui); letter-spacing: .04em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14),
+    0 1px 0 #8c0b2f, 0 2px 0 #82092b, 0 3px 0 #780828, 0 4px 0 #6e0725, 0 5px 0 #640622, 0 6px 0 #5a0520;
+  transform: translateY(-2px); transition: transform .14s ease, box-shadow .14s ease, background .2s;
+}
+.key:hover { transform: translateY(-5px); background: linear-gradient(180deg, #36333b, #222026); }
+.key:active, .key.pressed { transform: translateY(4px); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 1px 0 #8c0b2f, 0 2px 0 #5a0520; background: linear-gradient(180deg, #9e1240, #6a0b2c); }
+.key:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 4px; }
+.key span { white-space: nowrap; }
+.key .ico { width: 18px; height: 18px; stroke: #f4eff2; stroke-width: 1.9; }
+.key .ico .f { fill: #e0577f; fill-opacity: .25; }
+.key:active .ico .dot, .key.pressed .ico .dot { fill: #fff; }
+/* phones and tablets: compact keys (both languages) so the longer Spanish labels fit,
+   and the language pill joins the keys (6th item: free slot of row 2 on phones, end of the row on tablets) */
+@media (max-width: 1099px) { .keys { grid-template-columns: repeat(6, auto); gap: 10px; } }
+@media (max-width: 640px) { .keys { grid-template-columns: repeat(3, auto); } }
+@media (max-width: 1099px) {
+  .keys { gap: 10px 6px; }
+  .key { min-width: 0; padding: 11px 9px; font-size: 12px; gap: 5px; letter-spacing: .02em; }
+  .key .ico { width: 14px; height: 14px; }
+}
+.keys.is-hidden, .tiles.is-hidden { opacity: 0; pointer-events: none; }
+
+/* ---- Category tiles: square 3D keys at the bottom ---- */
+.tiles {
+  position: fixed; z-index: 2; left: 50%; transform: translateX(-50%);
+  bottom: calc(6vh + env(safe-area-inset-bottom, 0px));
+  display: grid; grid-template-columns: repeat(6, 96px); gap: 12px; transition: opacity .3s;
+}
+.tile {
+  position: relative; height: 104px; border-radius: 14px; padding: 10px; box-sizing: border-box;
+  display: grid; grid-template-rows: 1fr auto; justify-items: center; color: #f4eff2; cursor: default;
+  background: linear-gradient(160deg, #2c2a30, #1b1a1d);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12),
+    0 1px 0 #8c0b2f, 0 2px 0 #82092b, 0 3px 0 #780828, 0 4px 0 #6e0725, 0 5px 0 #640622, 0 12px 22px rgba(0,0,0,.2);
+  transform: perspective(500px) rotateX(0) translateY(0); transition: transform .18s ease, box-shadow .18s ease;
+}
+/* hover = a projector: the tile lights up, a wine beam rises and projects a big holographic icon + name above it */
+.tile:hover, .tile:focus-visible { transform: translateY(-4px); outline: none; z-index: 2;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 2px #e0577f, 0 1px 0 #8c0b2f, 0 5px 0 #640622, 0 0 30px rgba(224,87,127,.45); }
+.tile .beam { position: absolute; left: 50%; bottom: calc(100% - 6px); width: 150px; height: 128px; pointer-events: none; opacity: 0;
+  transform: translateX(-50%) scaleY(0); transform-origin: 50% 100%; transition: transform .35s ease-out, opacity .2s;
+  background: linear-gradient(0deg, rgba(224,87,127,.55), rgba(224,87,127,.12) 70%, transparent); clip-path: polygon(38% 100%, 62% 100%, 100% 0, 0 0); }
+.tile .holo { position: absolute; left: 50%; bottom: calc(100% + 34px); display: grid; justify-items: center; gap: 4px; pointer-events: none; opacity: 0;
+  transform: translateX(-50%) translateY(12px) scale(.8); transition: opacity .2s .12s, transform .4s .12s cubic-bezier(.2,.9,.3,1.3);
+  color: #fff; font: 700 15px/1 var(--font-ui); white-space: nowrap; text-shadow: 0 0 1px #6a0b2c, 0 0 2px #6a0b2c, 0 0 10px rgba(158,18,64,.9); }
+.tile .holo::after { content: ""; position: absolute; inset: -6px -14px; background: repeating-linear-gradient(0deg, rgba(255,255,255,.18) 0 1px, transparent 1px 4px); }
+.tile .holo .ico { width: 66px; height: 66px; stroke: #fff; stroke-width: 1.7; filter: drop-shadow(0 0 1px #6a0b2c) drop-shadow(0 0 1px #6a0b2c) drop-shadow(0 0 8px rgba(158,18,64,.85)); transform: none !important; }
+.tile .holo .ico .dot { fill: #fff; }
+.tile .holo .ico .f { fill: #e0577f; fill-opacity: .35; }
+.tile:hover .beam, .tile:focus-visible .beam { opacity: 1; transform: translateX(-50%) scaleY(1); }
+.tile:hover .holo, .tile:focus-visible .holo { opacity: 1; transform: translateX(-50%); animation: holoFlicker .5s .15s steps(1); }
+@keyframes holoFlicker { 0% { opacity: .2; } 20% { opacity: 1; } 40% { opacity: .5; } 55%, 100% { opacity: 1; } }
+.tile > .ico { transition: opacity .2s; }
+/* phones (3 + 3 grid): the bottom row projects above the top row, so the hologram never lands on a tile */
+@media (max-width: 760px) { .tile:nth-child(n+4) .beam { height: 232px; } .tile:nth-child(n+4) .holo { bottom: calc(100% + 136px); } }
+.tile:hover > .ico, .tile:focus-visible > .ico { opacity: .25; }
+@media (prefers-reduced-motion: reduce) { .tile .beam, .tile .holo { transition: none; } .tile:hover .holo, .tile:focus-visible .holo { animation: none; } }
+.tile:focus-visible { box-shadow: 0 0 0 2px #e0577f, 0 1px 0 #8c0b2f, 0 5px 0 #640622; }
+.tile .ico { width: 40px; height: 40px; align-self: center; stroke: #f4eff2; stroke-width: 1.6; transition: transform .18s ease; }
+.tile .ico .f { fill: #e0577f; fill-opacity: .3; }
+.tile .name { font: 600 11px/1.1 var(--font-ui); letter-spacing: .02em; white-space: nowrap; }
+@media (max-width: 760px) {
+  .tiles { grid-template-columns: repeat(3, 84px); gap: 10px; bottom: calc(4vh + env(safe-area-inset-bottom, 0px)); }
+  .tile { height: 92px; } .tile .ico { width: 34px; height: 34px; }
+}
+@media (prefers-reduced-motion: reduce) { .key, .tile { transition: none; } }

@@ -33,6 +33,9 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); ove
   font: 600 0.75rem/1 var(--font-ui); letter-spacing: .06em; transition: opacity .3s;
 }
 .lang.is-hidden { opacity: 0; pointer-events: none; }
+.lang--keys { position: static; align-self: center; justify-self: center; }
+.lang--keys { display: none; }
+@media (max-width: 1099px) { .lang--corner { display: none; } .lang--keys { display: flex; } }
 .lang-opt { display: flex; align-items: center; }
 .lang-sep { color: var(--muted); opacity: .6; padding: 0 1px; }
 .lang button { border: 0; background: none; cursor: pointer; padding: 6px 8px; border-radius: 999px;

@@ -41,7 +41,7 @@ export const CATEGORIES: { icon: string; label: L }[] = [
   { icon: 'Backend', label: { en: 'Backend', es: 'Backend' } },
   { icon: 'Data', label: { en: 'Data', es: 'Datos' } },
   { icon: 'AI', label: { en: 'AI', es: 'IA' } },
-  { icon: 'Tools', label: { en: 'Tools', es: 'Herramientas' } },
+  { icon: 'Tools', label: { en: 'Tools', es: 'Recursos' } },
 ]
 
 // ---- Shared UI ----

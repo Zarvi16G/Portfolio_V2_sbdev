@@ -5,7 +5,9 @@ import { watchFirstFrames } from './perf/lightMode'
 import { useQuality } from './perf/quality'
 import { NameCanvas } from './scene/NameScene'
 import { RoomCanvas } from './scene/Room'
+import { CategoryTiles } from './ui/CategoryTiles'
 import { LangToggle } from './ui/LangToggle'
+import { SectionKeys } from './ui/SectionKeys'
 
 // Light version: no WebGL at all, the name as HTML text in the same place.
 function LightName() {
@@ -26,7 +28,9 @@ export default function App() {
     <>
       {light ? <div className="light-bg" aria-hidden="true" /> : <RoomCanvas />}
       {light ? <LightName /> : <><h1 className="sr-only">Santiago Boada.dev</h1><NameCanvas /></>}
-      <LangToggle />
+      <SectionKeys onOpen={(id) => { if (import.meta.env.DEV) console.info('open section:', id) }} />
+      <CategoryTiles />
+      <LangToggle placement="corner" />
       {import.meta.env.DEV && (
         <div className="dev-chip">
           {light ? `light (${reason})` : 'full 3D'} · {lang} · {SECTIONS.map((s) => t(s.label)).join(' · ')}

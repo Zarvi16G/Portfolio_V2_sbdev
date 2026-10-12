@@ -1,8 +1,10 @@
-import { useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useMemo, useRef, useState } from 'react'
 import { SKILL_CATEGORIES, SKILLS_UI } from '../data/content'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { useLang } from '../i18n/lang'
-import { SkillsDie, type DieApi } from './SkillsDie'
+import type { DieApi } from './SkillsDie'
+
+const SkillsDie = lazy(() => import('./SkillsDie').then((m) => ({ default: m.SkillsDie })))
 
 // Skills: the die on the left and the always-readable summary on the right.
 // Chips are plain tags (no pop-up, no years). In the light version: the panel only.
@@ -24,7 +26,7 @@ export function Skills({ interactive, light }: { interactive: boolean; light: bo
     <>
       {!light && (
         <div className="die-box" role="img" aria-label={t(SKILLS_UI.dieLabel)}>
-          <SkillsDie faces={faces} word={t(SKILLS_UI.dieWord)} interactive={interactive} reduceMotion={reduceMotion} apiRef={die} onSelect={select} />
+          <Suspense fallback={null}><SkillsDie faces={faces} word={t(SKILLS_UI.dieWord)} interactive={interactive} reduceMotion={reduceMotion} apiRef={die} onSelect={select} /></Suspense>
         </div>
       )}
       <section className={`panel${light ? ' solo' : ''}`} aria-labelledby="skills-title">

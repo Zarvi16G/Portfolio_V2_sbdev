@@ -55,10 +55,6 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); ove
   text-shadow: 1px 1px 0 #8c0b2f, 2px 2px 0 #82092b, 3px 3px 0 #780828, 4px 4px 0 #6e0725, 6px 8px 14px rgba(0,0,0,.18); }
 .light-name span { display: block; }
 
-/* ---- Dev-only diagnostics chip (removed from production builds) ---- */
-.dev-chip { position: fixed; z-index: 9; left: 12px; bottom: 12px; padding: 6px 10px; border-radius: 8px;
-  background: rgba(29,25,27,.82); color: #f4eff2; font: 500 11px/1.4 ui-monospace, monospace; pointer-events: none; }
-
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---- Layers: room (0), name (1), tiles (2), keys + bubbles (3), sections (4-5) ---- */

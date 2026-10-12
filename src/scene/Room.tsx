@@ -143,7 +143,7 @@ function RoomScene() {
 }
 
 // paused: a section is open in front of the room; render only when needed
-export function RoomCanvas({ paused = false }: { paused?: boolean }) {
+export function RoomCanvas({ paused = false, onReady }: { paused?: boolean; onReady?: () => void }) {
   return (
     <div className="room-canvas" aria-hidden="true">
       <Canvas
@@ -151,6 +151,7 @@ export function RoomCanvas({ paused = false }: { paused?: boolean }) {
         dpr={[1, 2]}
         gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
         camera={{ fov: FOV, near: 0.1, far: 100, position: [0, CAM_H, CAM_D] }}
+        onCreated={() => onReady?.()}
       >
         <RoomScene />
       </Canvas>

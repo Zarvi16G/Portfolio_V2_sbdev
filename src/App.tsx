@@ -1,10 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
-import { SECTIONS, type SectionId } from './data/content'
-import { useLang } from './i18n/lang'
+import { lazy, Suspense, useCallback, useState } from 'react'
+import type { SectionId } from './data/content'
 import { watchFirstFrames } from './perf/lightMode'
 import { useQuality } from './perf/quality'
-import { NameCanvas } from './scene/NameScene'
-import { RoomCanvas } from './scene/Room'
 import { SectionHost, type ActiveSection, type SectionPhase } from './sections/SectionHost'
 import { CategoryTiles } from './ui/CategoryTiles'
 import { LangToggle } from './ui/LangToggle'
@@ -12,17 +9,17 @@ import { LightName } from './ui/LightName'
 import { SectionKeys, type KeyRect } from './ui/SectionKeys'
 import { SpeechBubbles } from './ui/SpeechBubble'
 
+// The 3D (three.js + R3F) loads on its own chunk: the light version never downloads it.
+const RoomCanvas = lazy(() => import('./scene/Room').then((m) => ({ default: m.RoomCanvas })))
+const NameCanvas = lazy(() => import('./scene/NameScene').then((m) => ({ default: m.NameCanvas })))
+
 export default function App() {
-  const { light, reason, pinned, goLight } = useQuality()
-  const { lang, t } = useLang()
+  const { light, pinned, goLight } = useQuality()
   const [active, setActive] = useState<ActiveSection | null>(null)
   const [phase, setPhase] = useState<SectionPhase | null>(null)
 
-  // a slow start (< 24 fps over the first 2 s) switches to the light version
-  useEffect(() => {
-    if (light || pinned) return
-    return watchFirstFrames(goLight)
-  }, [light, pinned, goLight])
+  // a slow start (< 24 fps over the first 2 s after the room is created) switches to the light version
+  const onRoomReady = useCallback(() => { if (!pinned) watchFirstFrames(goLight) }, [pinned, goLight])
 
   const open = useCallback((id: SectionId, from: KeyRect) => {
     setActive({ id, from }); setPhase('opening')
@@ -36,18 +33,13 @@ export default function App() {
 
   return (
     <>
-      {light ? <div className="light-bg" aria-hidden="true" /> : <RoomCanvas paused={paused} />}
-      {light ? <LightName /> : <><h1 className="sr-only">Santiago Boada.dev</h1><NameCanvas paused={paused} /></>}
+      {light ? <div className="light-bg" aria-hidden="true" /> : <Suspense fallback={null}><RoomCanvas paused={paused} onReady={onRoomReady} /></Suspense>}
+      {light ? <LightName /> : <><h1 className="sr-only">Santiago Boada.dev</h1><Suspense fallback={null}><NameCanvas paused={paused} /></Suspense></>}
       <SectionKeys onOpen={open} disabled={uiHidden} hiddenKey={active?.id ?? null} />
       <CategoryTiles hidden={uiHidden} />
       <LangToggle placement="corner" hidden={uiHidden} />
       {!light && <SpeechBubbles enabled={!active} />}
       <SectionHost active={active} phase={phase} light={light} onPhase={setPhase} onClosed={closed} />
-      {import.meta.env.DEV && (
-        <div className="dev-chip">
-          {light ? `light (${reason})` : 'full 3D'} · {lang} · {SECTIONS.map((s) => t(s.label)).join(' · ')}
-        </div>
-      )}
     </>
   )
 }

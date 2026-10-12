@@ -1,52 +1,76 @@
-// Light version for weak devices: decided once on load, before any 3D canvas mounts.
-// Light when: no WebGL2, deviceMemory <= 2, hardwareConcurrency <= 2 or prefers-reduced-data.
-// After mount, a slow first 2 s (< 24 fps average) also switches to light, remembered for the session.
-// Overrides: ?quality=lite forces the light version, ?quality=full the 3D one (?light=1 / ?light=0 also work).
+// Which version to show: 3D ("full") or light ("lite"). The decision, in this order:
+//   1. ?quality=full | ?quality=lite in the URL (?light=0 / ?light=1 also work)
+//   2. the visitor's choice in the selector, saved in localStorage "sb-quality"
+//   3. automatic: device checks now, and a frame-rate check once the 3D is running (never saved)
 
-const SESSION_KEY = 'sb-light'
+export type Mode = 'full' | 'lite'
+export type Pref = Mode | 'auto'
 
-export type LightReason = 'forced' | 'no-webgl2' | 'low-memory' | 'few-cores' | 'reduced-data' | 'slow-fps'
-// pinned: the URL forced a mode, so the fps watchdog stays off
-export type Quality = { light: boolean; reason: LightReason | null; pinned: boolean }
+const KEY = 'sb-quality'
 
-export function detectQuality(): Quality {
+export function readUrlMode(): Mode | null {
   const params = new URLSearchParams(location.search)
-  const force = params.get('quality') ?? ({ '1': 'lite', '0': 'full' } as Record<string, string>)[params.get('light') ?? '']
-  if (force === 'lite') return { light: true, reason: 'forced', pinned: true }
-  if (force === 'full') return { light: false, reason: null, pinned: true }
+  const q = params.get('quality') ?? ({ '1': 'lite', '0': 'full' } as Record<string, string>)[params.get('light') ?? '']
+  return q === 'full' || q === 'lite' ? q : null
+}
 
+// a manual choice replaces the URL override: drop the parameter so a reload keeps the choice
+export function clearUrlMode() {
+  const url = new URL(location.href)
+  if (!url.searchParams.has('quality') && !url.searchParams.has('light')) return
+  url.searchParams.delete('quality'); url.searchParams.delete('light')
+  history.replaceState(history.state, '', url)
+}
+
+export function readPref(): Pref {
   try {
-    if (sessionStorage.getItem(SESSION_KEY) === 'slow-fps') return { light: true, reason: 'slow-fps', pinned: false }
+    const v = localStorage.getItem(KEY)
+    if (v === 'full' || v === 'lite') return v
   } catch { /* storage blocked */ }
+  return 'auto'
+}
 
+export function savePref(p: Pref) {
+  try {
+    if (p === 'auto') localStorage.removeItem(KEY)
+    else localStorage.setItem(KEY, p)
+  } catch { /* storage blocked */ }
+}
+
+// Device checks, before any 3D code loads: light when there is no WebGL2, deviceMemory <= 2,
+// hardwareConcurrency <= 2 or prefers-reduced-data.
+export function detectDevice(): Mode {
   let gl2 = false
   try {
-    const c = document.createElement('canvas')
-    const gl = c.getContext('webgl2')
+    const gl = document.createElement('canvas').getContext('webgl2')
     gl2 = !!gl
     gl?.getExtension('WEBGL_lose_context')?.loseContext()
   } catch { /* no WebGL */ }
-  if (!gl2) return { light: true, reason: 'no-webgl2', pinned: false }
-
+  if (!gl2) return 'lite'
   const nav = navigator as Navigator & { deviceMemory?: number }
-  if (nav.deviceMemory !== undefined && nav.deviceMemory <= 2) return { light: true, reason: 'low-memory', pinned: false }
-  if (nav.hardwareConcurrency !== undefined && nav.hardwareConcurrency <= 2) return { light: true, reason: 'few-cores', pinned: false }
-  if (matchMedia('(prefers-reduced-data: reduce)').matches) return { light: true, reason: 'reduced-data', pinned: false }
-  return { light: false, reason: null, pinned: false }
+  if (nav.deviceMemory !== undefined && nav.deviceMemory <= 2) return 'lite'
+  if (nav.hardwareConcurrency !== undefined && nav.hardwareConcurrency <= 2) return 'lite'
+  if (matchMedia('(prefers-reduced-data: reduce)').matches) return 'lite'
+  return 'full'
 }
 
-// Measures the average frame rate over the first 2 s; calls onSlow if it is under 24 fps.
-export function watchFirstFrames(onSlow: () => void, ms = 2000, minFps = 24) {
-  let frames = 0, raf = 0
-  const start = performance.now()
+// Frame-rate check once the 3D is running: skip the first 30 frames (shader compile, textures), then measure
+// until 5 s after the start (at least from 2 s on); onSlow if the average is under 20 fps. Returns a cancel function.
+export function watchFrameRate(onSlow: () => void, { skipFrames = 30, from = 2000, to = 5000, minFps = 20 } = {}) {
+  let frames = 0, counted = 0, startAt = 0, raf = 0
+  const t0 = performance.now()
   const tick = (now: number) => {
     frames++
-    if (now - start < ms) { raf = requestAnimationFrame(tick); return }
-    const fps = (frames * 1000) / (now - start)
-    if (fps < minFps) {
-      try { sessionStorage.setItem(SESSION_KEY, 'slow-fps') } catch { /* storage blocked */ }
-      onSlow()
+    if (!startAt) {
+      if (frames >= skipFrames && now - t0 >= from) { startAt = now; counted = 0 }
+    } else {
+      counted++
+      if (now - t0 >= to && now - startAt >= 1000) {
+        if ((counted * 1000) / (now - startAt) < minFps) onSlow()
+        return
+      }
     }
+    raf = requestAnimationFrame(tick)
   }
   raf = requestAnimationFrame(tick)
   return () => cancelAnimationFrame(raf)

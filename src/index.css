@@ -27,24 +27,57 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); ove
 @media (min-width: 2560px) { :root { --z: 1.5; } }
 @media (min-width: 3840px) { :root { --z: 2; } }
 
-/* ---- Language toggle: EN | ES pill, top-right ---- */
+/* ---- EN | ES and Auto | 3D | Lite: two pills with the same look ---- */
+.toggles { display: flex; align-items: center; gap: 8px; transition: opacity .3s; }
+.toggles.is-hidden { opacity: 0; pointer-events: none; }
+.toggles--corner { position: fixed; z-index: 3; right: 16px; top: calc(16px + env(safe-area-inset-top, 0px)); }
+.toggles--keys { display: none; }
+/* below 1360px the keys would reach the corner: the pills move into the keys grid, stacked and a bit tighter */
+@media (max-width: 1359px) {
+  .toggles--corner { display: none; }
+  .toggles--keys { display: flex; flex-direction: column; gap: 4px; align-self: center; justify-self: center; }
+  .toggles--keys .lang { padding: 2px 4px; font-size: 0.6875rem; }
+  .toggles--keys .lang button { padding: 4px 6px; }
+}
+/* phones: the slot is one key wide, so the pills get tighter still ("Auto | 3D | Ligera" must fit) */
+@media (max-width: 640px) {
+  .toggles--keys .lang { padding: 2px 3px; font-size: 0.65625rem; letter-spacing: .02em; }
+  .toggles--keys .lang button { padding: 4px 4px; gap: 3px; }
+  .toggles--keys .lang-sep { padding: 0; }
+}
 .lang {
-  position: fixed; z-index: 3; right: 16px; top: calc(16px + env(safe-area-inset-top, 0px));
   display: flex; align-items: center; padding: 4px 6px; border: 1px solid var(--line); border-radius: 999px;
   background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  font: 600 0.75rem/1 var(--font-ui); letter-spacing: .06em; transition: opacity .3s;
+  font: 600 0.75rem/1 var(--font-ui); letter-spacing: .06em; white-space: nowrap;
 }
-.lang.is-hidden { opacity: 0; pointer-events: none; }
-.lang--keys { position: static; align-self: center; justify-self: center; }
-.lang--keys { display: none; }
-@media (max-width: 1099px) { .lang--corner { display: none; } .lang--keys { display: flex; } }
 .lang-opt { display: flex; align-items: center; }
 .lang-sep { color: var(--muted); opacity: .6; padding: 0 1px; }
-.lang button { border: 0; background: none; cursor: pointer; padding: 6px 8px; border-radius: 999px;
+.lang button { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; cursor: pointer; padding: 6px 8px; border-radius: 999px;
   font: inherit; letter-spacing: inherit; color: var(--muted); transition: color .2s; }
 .lang button:hover { color: var(--fg); }
-.lang button[aria-pressed="true"] { color: var(--accent); }
+.lang button[aria-pressed="true"], .lang button[aria-checked="true"] { color: var(--accent); }
 .lang button:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 1px; }
+/* Auto checked: a small dot marks the version the detection picked */
+.quality button.picked::after { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--accent-soft); }
+/* loading the 3D: a small spinner next to "3D" */
+.q-spin { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid currentColor; border-right-color: transparent; animation: qSpin .8s linear infinite; }
+@keyframes qSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .q-spin { animation-duration: 2.4s; } }
+
+/* "Light version for this device · Load 3D" (5 s) */
+.q-notice { position: fixed; z-index: 6; left: 50%; top: 96px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px 7px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--glass);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 8px 22px rgba(29,25,27,.14);
+  font: 500 0.75rem/1 var(--font-ui); color: var(--fg); white-space: nowrap; animation: qIn .3s ease-out both; }
+@keyframes qIn { from { opacity: 0; translate: 0 -6px; } }
+@media (prefers-reduced-motion: reduce) { .q-notice { animation: none; } }
+.q-notice-load { border: 0; cursor: pointer; padding: 6px 10px; border-radius: 999px; background: #1b1a1d; color: #f4eff2; font: 600 0.75rem/1 var(--font-ui); box-shadow: 0 2px 0 #8c0b2f; }
+.q-notice-x { border: 0; background: none; cursor: pointer; color: var(--muted); font: 600 1rem/1 var(--font-ui); padding: 2px 6px; }
+.q-notice button:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 2px; }
+
+/* a section is fully open: the name stays hidden and the room zoomed, also for a version switched in meanwhile */
+body.section-open .name-canvas, body.section-open .lite-name { opacity: 0; pointer-events: none; }
+body.section-open .room-canvas, body.section-open .lite-room { scale: 1.12; }
 
 /* ---- Light version: static captures of the 3D room and name (public/lite, scripts/capture-lite.ts) ---- */
 .lite-room { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: var(--bg); }

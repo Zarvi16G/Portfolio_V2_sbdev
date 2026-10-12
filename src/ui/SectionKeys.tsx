@@ -3,7 +3,7 @@ import { SECTIONS, UI, type SectionId } from '../data/content'
 import { prefersReducedMotion } from '../hooks/useReducedMotion'
 import { useLang } from '../i18n/lang'
 import { Icon } from './icons'
-import { LangToggle } from './LangToggle'
+import { Toggles } from './Toggles'
 
 export type KeyRect = { left: number; top: number; width: number; height: number }
 
@@ -55,8 +55,8 @@ export function SectionKeys({ onOpen, disabled = false, hiddenKey = null }: {
           </button>
         </span>
       ))}
-      {/* phones and tablets: the language pill sits with the keys (see keys-tiles.css) */}
-      <LangToggle placement="keys" />
+      {/* below 1360px the language and quality pills sit with the keys (see keys-tiles.css) */}
+      <Toggles placement="keys" />
     </nav>
   )
 }

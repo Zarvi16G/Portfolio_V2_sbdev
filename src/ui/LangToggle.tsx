@@ -4,11 +4,10 @@ import { useLang } from '../i18n/lang'
 
 const OPTIONS: Lang[] = ['en', 'es']
 
-// Two placements: top-right corner (tablet and up) and inside the keys grid on phones.
-export function LangToggle({ hidden = false, placement }: { hidden?: boolean; placement: 'corner' | 'keys' }) {
+export function LangToggle() {
   const { lang, setLang, t } = useLang()
   return (
-    <div className={`lang lang--${placement}${hidden ? ' is-hidden' : ''}`} role="group" aria-label={t(UI.langToggle)} inert={hidden}>
+    <div className="lang" role="group" aria-label={t(UI.langToggle)}>
       {OPTIONS.map((l, i) => (
         <span key={l} className="lang-opt">
           {i > 0 && <span className="lang-sep" aria-hidden="true">|</span>}

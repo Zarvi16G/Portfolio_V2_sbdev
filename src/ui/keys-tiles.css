@@ -24,8 +24,8 @@ svg.ico { fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none;
 .key .ico .f { fill: #e0577f; fill-opacity: .25; }
 .key:active .ico .dot, .key.pressed .ico .dot { fill: #fff; }
 /* phones and tablets: compact keys (both languages) so the longer Spanish labels fit,
-   and the language pill joins the keys (6th item: free slot of row 2 on phones, end of the row on tablets) */
-@media (max-width: 1099px) { .keys { grid-template-columns: repeat(6, auto); gap: 10px; } }
+   (the EN | ES and quality pills join the keys below 1360px: free slot of row 2 on phones, end of the row above) */
+@media (max-width: 1359px) { .keys { grid-template-columns: repeat(6, auto); } }
 @media (max-width: 640px) { .keys { grid-template-columns: repeat(3, auto); } }
 @media (max-width: 1099px) {
   .keys { gap: 10px 6px; }

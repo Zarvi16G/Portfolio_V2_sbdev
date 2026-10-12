@@ -84,6 +84,7 @@ function RoomScene() {
 
   const uniforms = useMemo(() => ({ uRes: { value: new THREE.Vector2(1, 1) }, uDpr: { value: 1 } }), [])
   const blobTex = useMemo(() => blobTexture(), [])
+  useEffect(() => () => blobTex.dispose(), [blobTex])
 
   // environment light (RoomEnvironment through PMREM)
   useEffect(() => {

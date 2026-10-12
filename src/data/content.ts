@@ -57,6 +57,19 @@ export const UI = {
   },
 } satisfies Record<string, L>
 
+// ---- Graphics quality selector ----
+export const QUALITY = {
+  label: { en: 'Graphics quality', es: 'Calidad gráfica' },
+  auto: { en: 'Auto', es: 'Auto' },
+  full: { en: '3D', es: '3D' },
+  lite: { en: 'Lite', es: 'Ligera' },
+  autoPicked: { en: 'chosen automatically', es: 'elegida automáticamente' },
+  loading: { en: 'Loading 3D…', es: 'Cargando 3D…' },
+  notice: { en: 'Light version for this device', es: 'Versión ligera para este dispositivo' },
+  load3d: { en: 'Load 3D', es: 'Cargar 3D' },
+  dismiss: { en: 'Dismiss', es: 'Cerrar' },
+} satisfies Record<string, L>
+
 // ---- Speech bubbles and watering ----
 export const BUBBLES = {
   personLabel: { en: 'Message from Santiago', es: 'Mensaje de Santiago' },

@@ -96,8 +96,8 @@ function text3D(font: Font, str: string, size: number, maxW: number, mat: THREE.
 type Anim = { t0: number; dur: number; q0: THREE.Quaternion; face: number; then?: () => void }
 
 const CAM_DIR = new THREE.Vector3(3.4, 2.4, 6.8).normalize()
-const DRAG_RAD_PER_PX = 0.008       // how far the die turns per pixel dragged
-const INERTIA_DAMPING = 4           // 1/s: the spin left after release fades as exp(-4 t)
+const DRAG_RAD_PER_PX = 0.0085      // how far the die turns per pixel dragged (same as the skill)
+const INERTIA_DAMPING = 3.2         // 1/s: the spin left after release fades as exp(-3.2 t) (same as the skill)
 const AUTO_SPEED = 0.063            // rad/s around screen Y when idle (one turn in ~100 s)
 const CLICK_PX = 6                  // a press that moves less than this is a click (selects the face)
 

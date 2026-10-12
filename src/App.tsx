@@ -8,6 +8,7 @@ import { RoomCanvas } from './scene/Room'
 import { CategoryTiles } from './ui/CategoryTiles'
 import { LangToggle } from './ui/LangToggle'
 import { SectionKeys } from './ui/SectionKeys'
+import { SpeechBubbles } from './ui/SpeechBubble'
 
 // Light version: no WebGL at all, the name as HTML text in the same place.
 function LightName() {
@@ -31,6 +32,7 @@ export default function App() {
       <SectionKeys onOpen={(id) => { if (import.meta.env.DEV) console.info('open section:', id) }} />
       <CategoryTiles />
       <LangToggle placement="corner" />
+      {!light && <SpeechBubbles enabled />}
       {import.meta.env.DEV && (
         <div className="dev-chip">
           {light ? `light (${reason})` : 'full 3D'} · {lang} · {SECTIONS.map((s) => t(s.label)).join(' · ')}

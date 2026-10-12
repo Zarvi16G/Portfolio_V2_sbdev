@@ -1,8 +1,10 @@
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useLayoutEffect, useMemo, type Ref } from 'react'
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
 import { codeScreen } from './CodeScreen'
+import { roomBridge } from './roomBridge'
+import { WateringCan } from './WateringCan'
 
 // The cartoon desk setup: desk with a wine LED strip, two code monitors, keyboard, mouse,
 // a small plant, a gaming chair and a person seen from behind with the right hand on the mouse.
@@ -167,6 +169,10 @@ function clickAt(t: number) {
   if (n % 3 === 1) p = Math.max(p, press(k - 0.2))
   return p
 }
+// where each speech bubble points (setup space): the person's head, the top of the plant
+const ANCHORS: Record<SetupKind, THREE.Vector3> = { person: new THREE.Vector3(0, 1.47, 1.11), plant: new THREE.Vector3(0.68, 1.0, 0.3) }
+const PLANT_RAISE = 0.26   // the plant's bubble moves up while watering so the can stays visible
+
 const FINGER_DOWN = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -0.35)
 const IDENTITY = new THREE.Quaternion()
 
@@ -190,6 +196,28 @@ export function DeskSetup({ reduceMotion, blobTex, ref }: { reduceMotion: boolea
     }
   }, [parts, ref, blobTex])
 
+  // clicks on the person or the plant (speech bubbles): raycast + projection for the HTML bubbles
+  const { camera, gl } = useThree()
+  useLayoutEffect(() => {
+    const pickables = parts.setup.children.filter((o) => o.userData.kind === 'plant' || o.userData.kind === 'person')
+    const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), a = new THREE.Vector3()
+    roomBridge.pick = (x, y) => {
+      const r = gl.domElement.getBoundingClientRect()
+      ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1)
+      ray.setFromCamera(ndc, camera)
+      const hit = ray.intersectObjects(pickables, true)[0]
+      return hit ? (hit.object.userData.kind as SetupKind) : null
+    }
+    roomBridge.project = (kind, raised) => {
+      a.copy(ANCHORS[kind]); if (raised) a.y += PLANT_RAISE
+      parts.setup.updateWorldMatrix(true, false)
+      const p = parts.setup.localToWorld(a).project(camera)
+      const r = gl.domElement.getBoundingClientRect()
+      return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height }
+    }
+    return () => { roomBridge.pick = null; roomBridge.project = null }
+  }, [parts, camera, gl])
+
   const q = useMemo(() => new THREE.Quaternion(), [])
   useFrame(({ clock }) => {
     if (reduceMotion) return
@@ -202,5 +230,10 @@ export function DeskSetup({ reduceMotion, blobTex, ref }: { reduceMotion: boolea
     parts.mouse.position.y = 0.792 - p * 0.002
   })
 
-  return <primitive object={parts.setup} />
+  return (
+    <>
+      <primitive object={parts.setup} />
+      <WateringCan parts={parts} reduceMotion={reduceMotion} />
+    </>
+  )
 }

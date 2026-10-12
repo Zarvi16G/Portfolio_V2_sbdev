@@ -194,6 +194,7 @@ export function NameCanvas({ paused = false }: { paused?: boolean }) {
       <Canvas
         frameloop={paused ? 'never' : 'always'}
         dpr={[1, 2]}
+        resize={{ offsetSize: true, scroll: false }}   // measure the layout box: sections scale these canvases
         gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
         camera={{ fov: 30, near: 0.1, far: 200 }}
         onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}

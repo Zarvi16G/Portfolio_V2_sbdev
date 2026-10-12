@@ -1,8 +1,6 @@
-import { OrbitControls } from '@react-three/drei'
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
@@ -10,7 +8,8 @@ import { FontLoader, type Font } from 'three/addons/loaders/FontLoader.js'
 import { useTimer } from '../hooks/useTimer'
 
 // The skills die: a gray porcelain rounded cube with a thin wine decal on each face
-// (the face number 1-6, in the order of the categories, and the category name in low-relief 3D text). Slow auto-rotate, no zoom or pan.
+// (the face number 1-6, in the order of the categories, and the category name in low-relief 3D text).
+// The camera is fixed; dragging turns the die itself like a trackball (no OrbitControls: they stop at the poles). Slow auto-rotate, no zoom or pan.
 // Hovering a category card turns its face to the camera; clicking a face selects its card.
 
 export type DieFace = { title: string; n: number }   // n: face number 1-6 (category order)
@@ -93,9 +92,14 @@ function text3D(font: Font, str: string, size: number, maxW: number, mat: THREE.
   return m
 }
 
-// face: the face being brought to the camera; its target is recomputed every frame from the live camera
-// (the controls' damping keeps the camera gliding a moment after auto-rotate stops)
+// face: the face being brought to the camera (hover in the list, or a click on a face)
 type Anim = { t0: number; dur: number; q0: THREE.Quaternion; face: number; then?: () => void }
+
+const CAM_DIR = new THREE.Vector3(3.4, 2.4, 6.8).normalize()
+const DRAG_RAD_PER_PX = 0.008       // how far the die turns per pixel dragged
+const INERTIA_DAMPING = 4           // 1/s: the spin left after release fades as exp(-4 t)
+const AUTO_SPEED = 0.063            // rad/s around screen Y when idle (one turn in ~100 s)
+const CLICK_PX = 6                  // a press that moves less than this is a click (selects the face)
 
 function Die({ faces, interactive, reduceMotion, apiRef, onSelect }: {
   faces: DieFace[]; interactive: boolean; reduceMotion: boolean
@@ -104,11 +108,12 @@ function Die({ faces, interactive, reduceMotion, apiRef, onSelect }: {
   const font = useLoader(FontLoader, FONT_URL)
   const { gl, scene, camera, size } = useThree()
   const built = useMemo(buildDie, [])
-  const controls = useRef<OrbitControlsImpl>(null)
   const anim = useRef<Anim | null>(null)
   const hovered = useRef(-1), panelHover = useRef(-1), selected = useRef(-1)
-  const idleTimer = useRef(0)
-  const hold = useRef(-1)   // face kept looking at the camera after the turn (while its card is hovered / just clicked)
+  const hold = useRef(-1)                         // face kept square to the camera after the turn
+  const dragging = useRef(false)
+  const spin = useRef(new THREE.Vector3())        // angular velocity after release (axis * rad/s, world space)
+  const autoAfter = useRef(0)                     // auto-rotate resumes at this time (ms); Infinity = paused
 
   useEffect(() => () => built.dispose(), [built])
 
@@ -132,11 +137,12 @@ function Die({ faces, interactive, reduceMotion, apiRef, onSelect }: {
     })
   }, [font, faces, built])
 
-  // narrow screens: step back so the whole cube fits
+  // fixed camera looking at the die; narrow screens step back so the whole cube fits
   useLayoutEffect(() => {
     const need = size.width / size.height < 0.8 ? 12.5 : 8.5
-    if (camera.position.lengthSq() === 0) camera.position.set(3.4, 2.4, 6.8)
-    if (!anim.current) camera.position.setLength(need)
+    camera.position.copy(CAM_DIR).multiplyScalar(need)
+    camera.lookAt(0, 0, 0)
+    camera.updateMatrixWorld()
   }, [camera, size])
 
   // the rotation that brings face i to the camera, text upright
@@ -144,84 +150,133 @@ function Die({ faces, interactive, reduceMotion, apiRef, onSelect }: {
     const f = FACES[i]
     const zL = f.n.clone(), yL = f.up.clone(), xL = new THREE.Vector3().crossVectors(yL, zL)
     const Lm = new THREE.Matrix4().makeBasis(xL, yL, zL)
-    const target = controls.current?.target ?? new THREE.Vector3()
-    const zW = camera.position.clone().sub(target).normalize()
+    const zW = camera.position.clone().normalize()
     const yW = camera.up.clone().sub(zW.clone().multiplyScalar(camera.up.dot(zW))).normalize()
     const xW = new THREE.Vector3().crossVectors(yW, zW)
     const Wm = new THREE.Matrix4().makeBasis(xW, yW, zW)
     return new THREE.Quaternion().setFromRotationMatrix(Wm.multiply(Lm.invert()))
   }
-  const setAutoRotate = (on: boolean) => { if (controls.current) controls.current.autoRotate = on && !reduceMotion }
 
   useEffect(() => {
     const api: DieApi = {
       faceHover(i) {
         panelHover.current = i
-        clearTimeout(idleTimer.current)
-        if (i < 0) { hold.current = -1; idleTimer.current = window.setTimeout(() => { if (!anim.current) setAutoRotate(true) }, 2500); return }
-        setAutoRotate(false)
-        hold.current = -1
+        if (i < 0) { hold.current = -1; autoAfter.current = performance.now() + 2500; return }
+        autoAfter.current = Infinity
+        hold.current = -1; spin.current.set(0, 0, 0)
         anim.current = { t0: performance.now(), dur: reduceMotion ? 1 : 700, q0: built.group.quaternion.clone(), face: i, then: () => { hold.current = i } }
       },
       activate(i) {
-        setAutoRotate(false)
-        hold.current = -1
+        hold.current = -1; spin.current.set(0, 0, 0)
+        autoAfter.current = panelHover.current >= 0 ? Infinity : performance.now() + 4000
         anim.current = { t0: performance.now(), dur: reduceMotion ? 1 : 600, q0: built.group.quaternion.clone(), face: i, then: () => { selected.current = i; hold.current = i; onSelect(i) } }
-        clearTimeout(idleTimer.current)
-        idleTimer.current = window.setTimeout(() => { if (!anim.current && panelHover.current < 0) { hold.current = -1; setAutoRotate(true) } }, 4000)
       },
     }
     apiRef.current = api
     // development only: lets the tests read the die's state (stripped from production builds)
-    if (import.meta.env.DEV) (window as unknown as { __die: unknown }).__die = { group: built.group, camera, controls: controls.current, faces: FACES, labels: faces }
-    return () => { apiRef.current = null; clearTimeout(idleTimer.current) }
+    if (import.meta.env.DEV) (window as unknown as { __die: unknown }).__die = { group: built.group, camera, target: new THREE.Vector3(), faces: FACES, labels: faces, state: () => ({ dragging: dragging.current, spin: spin.current.length(), auto: autoOn(), anim: !!anim.current, hold: hold.current }) }
+    return () => { apiRef.current = null }
   })
 
-  // ---- picking: only the decals (the die body blocks what is behind it) ----
+  // ---- drag = trackball (horizontal: around the camera's up axis, vertical: around its right axis) ----
   useEffect(() => {
     const canvas = gl.domElement
     const ray = new THREE.Raycaster(), ndc = new THREE.Vector2()
     const pickables = [built.die, ...built.panels.map((p) => p.cardMesh)]
-    const pick = (e: PointerEvent) => {
+    const pick = (x: number, y: number) => {
       const r = canvas.getBoundingClientRect()
-      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
+      ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1)
       ray.setFromCamera(ndc, camera)
       const hit = ray.intersectObjects(pickables, false)[0]
       return !hit || hit.object === built.die ? -1 : (hit.object.userData.panel as number)
     }
-    let downAt: [number, number] | null = null
-    const down = (e: PointerEvent) => { downAt = [e.clientX, e.clientY]; hold.current = -1 }   // grabbing the die releases the hold
-    const up = (e: PointerEvent) => {
-      if (!downAt || !interactive) return
-      const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]); downAt = null
-      if (moved > 6) return
-      const i = pick(e); if (i >= 0) apiRef.current?.activate(i)
+    const camUp = new THREE.Vector3(), camRight = new THREE.Vector3(), q = new THREE.Quaternion(), step = new THREE.Vector3()
+    let press: { id: number; x0: number; y0: number; x: number; y: number; t: number } | null = null
+
+    const down = (e: PointerEvent) => {
+      if (!interactive || e.button !== 0) return
+      press = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t: performance.now() }
+      spin.current.set(0, 0, 0)                     // catching the die stops its spin
     }
     const move = (e: PointerEvent) => {
-      hovered.current = anim.current || !interactive ? -1 : pick(e)
+      if (press && e.pointerId === press.id) {
+        if (!dragging.current && Math.hypot(e.clientX - press.x0, e.clientY - press.y0) > CLICK_PX) {
+          dragging.current = true
+          canvas.setPointerCapture(e.pointerId)
+          anim.current = null; hold.current = -1    // a drag cancels any face turn, and it does not come back
+          autoAfter.current = Infinity
+          canvas.style.cursor = 'grabbing'
+        }
+        if (dragging.current) {
+          const dx = e.clientX - press.x, dy = e.clientY - press.y, now = performance.now()
+          camUp.set(0, 1, 0).applyQuaternion(camera.quaternion)
+          camRight.set(1, 0, 0).applyQuaternion(camera.quaternion)
+          // world-space rotation vector of this step, applied on the left (premultiply) so it is about screen axes
+          step.copy(camUp).multiplyScalar(dx * DRAG_RAD_PER_PX).addScaledVector(camRight, dy * DRAG_RAD_PER_PX)
+          const angle = step.length()
+          if (angle > 0) built.group.quaternion.premultiply(q.setFromAxisAngle(step.clone().divideScalar(angle), angle))
+          // velocity for the inertia (smoothed over the last moves)
+          const dt = Math.max(1, now - press.t) / 1000
+          spin.current.lerp(step.divideScalar(dt), 0.5)
+          press.x = e.clientX; press.y = e.clientY; press.t = now
+        }
+        return
+      }
+      hovered.current = anim.current || !interactive ? -1 : pick(e.clientX, e.clientY)
       canvas.style.cursor = hovered.current >= 0 ? 'pointer' : 'grab'
     }
-    const leave = () => { hovered.current = -1 }
-    canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointerup', up)
-    canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerleave', leave)
-    return () => {
-      canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointerup', up)
-      canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerleave', leave)
+    const up = (e: PointerEvent) => {
+      if (!press || e.pointerId !== press.id) return
+      if (dragging.current) {
+        dragging.current = false
+        if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId)
+        // still if the pointer rested before letting go; no inertia with reduced motion
+        if (reduceMotion || performance.now() - press.t > 80) spin.current.set(0, 0, 0)
+        autoAfter.current = performance.now() + 4000
+        canvas.style.cursor = 'grab'
+      } else {
+        const i = pick(e.clientX, e.clientY)
+        if (i >= 0) apiRef.current?.activate(i)
+      }
+      press = null
     }
-  }, [gl, camera, built, interactive, apiRef])
+    const leave = () => { hovered.current = -1 }
+    canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move)
+    canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up); canvas.addEventListener('pointerleave', leave)
+    return () => {
+      canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move)
+      canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', up); canvas.removeEventListener('pointerleave', leave)
+    }
+  }, [gl, camera, built, interactive, apiRef, reduceMotion])
+
+  const autoOn = () => !reduceMotion && interactive && !dragging.current && !anim.current && hold.current < 0
+    && spin.current.lengthSq() === 0 && performance.now() >= autoAfter.current
 
   const timer = useTimer()
+  const q = useMemo(() => new THREE.Quaternion(), [])
+  const axis = useMemo(() => new THREE.Vector3(), [])
   useFrame(() => {
     timer.update()
-    const dt = Math.min(timer.getDelta(), 0.05)
+    // real elapsed time (the Timer already ignores the time a hidden tab was away); the sticker easing uses a capped step
+    const realDt = Math.min(timer.getDelta(), 0.5), dt = Math.min(realDt, 0.05)
     const a = anim.current
     if (a) {
       const t = Math.min(1, (performance.now() - a.t0) / a.dur)
       built.group.quaternion.slerpQuaternions(a.q0, alignQuat(a.face), ease(t))
       if (t >= 1) { anim.current = null; a.then?.() }
     } else if (hold.current >= 0) {
-      // keep the face square to the camera while the damping settles
-      built.group.quaternion.slerp(alignQuat(hold.current), 1 - Math.exp(-14 * dt))
+      built.group.quaternion.copy(alignQuat(hold.current))
+    } else if (!dragging.current && spin.current.lengthSq() > 0) {
+      // inertia: keep turning with the release velocity, fading as exp(-k t). The angle of this step is the exact
+      // integral of that fade over the real frame time, so 30 fps and 120 fps end at the same place.
+      const w = spin.current.length(), decay = Math.exp(-INERTIA_DAMPING * realDt)
+      built.group.quaternion.premultiply(q.setFromAxisAngle(axis.copy(spin.current).divideScalar(w), (w * (1 - decay)) / INERTIA_DAMPING))
+      spin.current.multiplyScalar(decay)
+      if (spin.current.length() < 0.02) spin.current.set(0, 0, 0)
+    } else if (autoOn()) {
+      // slow auto-rotate around the screen's vertical axis
+      axis.set(0, 1, 0).applyQuaternion(camera.quaternion)
+      built.group.quaternion.premultiply(q.setFromAxisAngle(axis, AUTO_SPEED * realDt))
     }
     // hover: the sticker lifts off the face a little and grows
     built.panels.forEach((p, i) => {
@@ -231,7 +286,6 @@ function Die({ faces, interactive, reduceMotion, apiRef, onSelect }: {
       p.sticker.scale.setScalar(1 + p.hover * 0.02)
       ;(p.cardMesh.material as THREE.MeshPhysicalMaterial).emissiveIntensity = p.hover * 0.9
     })
-    if (controls.current) controls.current.enabled = !anim.current && interactive
   })
 
   return (
@@ -240,7 +294,6 @@ function Die({ faces, interactive, reduceMotion, apiRef, onSelect }: {
       <directionalLight color={0xff8fb0} intensity={0.7} position={[6, -2, -5]} />
       <ambientLight intensity={0.15} />
       <primitive object={built.group} />
-      <OrbitControls ref={controls} makeDefault enableZoom={false} enablePan={false} enableDamping autoRotate={!reduceMotion} autoRotateSpeed={0.6} />
     </>
   )
 }
@@ -249,6 +302,8 @@ export function SkillsDie(props: React.ComponentProps<typeof Die>) {
   return (
     <Canvas
       dpr={[1, 2]}
+      // offsetSize: measure the layout box, not the on-screen one (the box opens with a transform)
+      resize={{ offsetSize: true, scroll: false }}
       gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
       camera={{ fov: 40, near: 0.05, far: 100, position: [3.4, 2.4, 6.8] }}
       onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}

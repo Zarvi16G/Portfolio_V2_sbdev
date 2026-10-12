@@ -150,6 +150,7 @@ export function RoomCanvas({ paused = false, onReady }: { paused?: boolean; onRe
       <Canvas
         frameloop={paused ? 'demand' : 'always'}
         dpr={[1, 2]}
+        resize={{ offsetSize: true, scroll: false }}   // measure the layout box: sections scale these canvases
         gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
         camera={{ fov: FOV, near: 0.1, far: 100, position: [0, CAM_H, CAM_D] }}
         onCreated={() => onReady?.()}

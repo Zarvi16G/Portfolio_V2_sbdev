@@ -18,7 +18,6 @@ export type ActiveSection = { id: SectionId; from: KeyRect }
 
 const EASE = 'cubic-bezier(.65,0,.25,1)'
 const zoomMs = () => (prefersReducedMotion() ? 1 : 950)
-const px = (r: KeyRect) => ({ left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` })
 const rectOf = (el: Element): KeyRect => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height } }
 const keyEl = (id: SectionId) => document.querySelector<HTMLElement>(`.key[data-section="${id}"]`)
 
@@ -43,6 +42,17 @@ function zoomPortfolio(open: boolean, origin?: KeyRect) {
   name.animate(open ? a : [...a].reverse(), opts)
   bg.animate(open ? b : [...b].reverse(), opts)
   name.style.pointerEvents = open ? 'none' : ''
+}
+
+// FLIP for the die box: it is mounted at its final size and place (so its canvas is measured once) and only its
+// transform animates: a uniform scale (the smaller factor, so it never stretches) + a translate from the key's rect.
+function flip(box: HTMLElement, key: KeyRect, open: boolean) {
+  const to = box.getBoundingClientRect()
+  const s = Math.min(key.width / to.width, key.height / to.height)
+  const dx = key.left + key.width / 2 - (to.left + to.width / 2), dy = key.top + key.height / 2 - (to.top + to.height / 2)
+  const small = { transform: `translate(${dx}px, ${dy}px) scale(${s})`, opacity: 0 }
+  const big = { transform: 'none', opacity: 1 }
+  return box.animate(open ? [small, big] : [big, small], { duration: zoomMs(), easing: EASE, fill: open ? 'none' : 'forwards' })
 }
 
 // a box (panel / card) grows out of the key's rect, or shrinks back into it
@@ -81,7 +91,7 @@ export function SectionHost({ active, phase, light, onPhase, onClosed }: {
     if (sideBySide) {
       // the die grows from the key into its box on the left; the summary slides in
       const box = root.current.querySelector<HTMLElement>('.die-box'), panel = root.current.querySelector<HTMLElement>('.panel')
-      if (box) box.animate([px(from), px(rectOf(box))], { duration: ms, easing: EASE })
+      if (box) flip(box, from, true)
       panel?.animate([{ opacity: 0, transform: innerWidth > 860 ? 'translateX(40px)' : 'translateY(40px)' }, { opacity: 1, transform: 'none' }],
         { duration: ms * 0.7, delay: ms * 0.35, easing: EASE, fill: 'backwards' })
     } else {
@@ -110,7 +120,7 @@ export function SectionHost({ active, phase, light, onPhase, onClosed }: {
       const box = root.current.querySelector<HTMLElement>('.die-box'), panel = root.current.querySelector<HTMLElement>('.panel')
       panel?.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: innerWidth > 860 ? 'translateX(40px)' : 'translateY(40px)' }],
         { duration: ms * 0.5, easing: EASE, fill: 'forwards' })
-      if (box) anim = box.animate([px(rectOf(box)), px(to)], { duration: ms, easing: EASE, fill: 'forwards' })
+      if (box) anim = flip(box, to, false)
     } else {
       const card = root.current.querySelector<HTMLElement>('.projects, .panel')
       if (card) anim = morph(card, to, false)

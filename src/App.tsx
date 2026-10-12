@@ -3,6 +3,7 @@ import { NAME_LINES, SECTIONS } from './data/content'
 import { useLang } from './i18n/lang'
 import { watchFirstFrames } from './perf/lightMode'
 import { useQuality } from './perf/quality'
+import { NameCanvas } from './scene/NameScene'
 import { RoomCanvas } from './scene/Room'
 import { LangToggle } from './ui/LangToggle'
 
@@ -24,7 +25,7 @@ export default function App() {
   return (
     <>
       {light ? <div className="light-bg" aria-hidden="true" /> : <RoomCanvas />}
-      {light ? <LightName /> : <h1 className="sr-only">Santiago Boada.dev</h1>}
+      {light ? <LightName /> : <><h1 className="sr-only">Santiago Boada.dev</h1><NameCanvas /></>}
       <LangToggle />
       {import.meta.env.DEV && (
         <div className="dev-chip">

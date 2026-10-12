@@ -222,14 +222,14 @@ Check at 390×844, 820×1180, 1440×900 and 3840×2160.
 
 ## Assets
 
-Everything else is made by code (shaders, canvas textures, CSS, SVG icons): there are no image files to add. The only other asset is the font: extract the JSON inside `<script id="font-data">` of reference.html to `public/fonts/Poppins_Bold.typeface.json`, and load Poppins 500/600/700, Newsreader 500 and Public Sans 400/600 from Google Fonts.
+Everything else is made by code (shaders, canvas textures, CSS, SVG icons): there are no image files to add. The only other asset is the font: extract the JSON inside `<script id="font-data">` of reference.html to `public/fonts/Poppins_Bold.typeface.json`, and self-host Poppins 500/600/700, Newsreader 500 and Public Sans 400/600 with `@fontsource/*` (imported in `main.tsx`, bundled into `/assets`). **No Google Fonts**: the CSP only allows this origin.
 
 ## Build decisions (confirmed by Santiago)
 
 | Decision | Choice |
 |---|---|
 | Repository | A **new repo from scratch** (suggested name `santiagoboada-portfolio`). The current site stays online until the new one replaces it. |
-| Hosting | **Santiago's VPS**, same as `finance.santiagoboada.dev`: static `npm run build` → `dist/`, served by Nginx with SSL (Certbot). |
+| Hosting | **Santiago's VPS** (Docker, host Nginx, GoDaddy certificate, Cloudflare proxy): Docker image on GHCR deployed by GitHub Actions after his approval. See Deploy to the VPS. |
 | Language | **English + Spanish** with a toggle. English is the default; Spanish when the browser language starts with `es`; the choice is remembered (`localStorage`, try/catch) and `<html lang>` follows it. The name `Santiago / Boada.dev` and the brand names never change. |
 | Weak devices | **Automatic light version** (below). |
 
@@ -276,21 +276,30 @@ Decide once on load, before mounting the 3D canvases:
 
 ### Deploy to the VPS
 
-Build with `npm run build`, upload `dist/` to `/var/www/santiagoboada.dev`. Nginx server block (then `certbot --nginx -d santiagoboada.dev -d www.santiagoboada.dev`):
+**Docker image on GHCR, deployed by GitHub Actions after Santiago's approval.** Claude never connects to the VPS (no ssh, scp or remote commands): anything on the server goes in `docs/SERVER-SETUP.md`, which Santiago runs. No secrets in the repo. Never push or create the remote repo without asking.
 
-```nginx
-server {
-  server_name santiagoboada.dev www.santiagoboada.dev;
-  root /var/www/santiagoboada.dev;
-  index index.html;
-  location / { try_files $uri $uri/ /index.html; }
-  location /assets/ { expires 1y; add_header Cache-Control "public, immutable"; }
-  location ~* \.(?:svg|ico|png|json)$ { expires 30d; }
-  gzip on; gzip_types text/css application/javascript application/json image/svg+xml;
-}
+```
+tag v* / Run workflow ─► build: npm ci, npm audit, docker build ─► ghcr.io/zarvi16g/santiagoboada-portfolio:AAAAMMDD-HHMM-<sha7> (private)
+                      ─► deploy: environment "production" (required reviewer) ─► ssh deploy@<VPS IP> "<tag>" ─► /opt/portfolio/deploy.sh
+                      ─► check: curl -sfI https://santiagoboada.dev → 200 + Content-Security-Policy
+visitor ─► Cloudflare (proxy, Full strict, TLS ≥ 1.2) ─► host Nginx :443 (GoDaddy cert, HSTS, real IP) ─► container 127.0.0.1:8081 → 8080
 ```
 
-Add a `deploy` script only when Santiago asks; never push to the server without him.
+| File | Rules |
+|---|---|
+| `Dockerfile` | multi-stage: `node:22.x-alpine` (`npm ci`, `npm audit --audit-level=high`, `npm run build`) → `nginxinc/nginx-unprivileged:<version>-alpine` (no root, port 8080) with `dist/` only. Base images pinned by **version + digest**. `HEALTHCHECK` with `wget` on `/`. `vite build.sourcemap = false`. `.dockerignore`: node_modules, .git, .github, .claude, .env*, dist, docs, scripts, deploy, *.md |
+| `docker/nginx.conf` + `docker/security-headers.conf` | `server_tokens off`, `autoindex off`, GET/HEAD only (405), hidden files 404, gzip (js, css, json, svg). Cache: `/assets/*` `public, max-age=31536000, immutable`; `index.html` `no-cache`; un-hashed icons/webp/font JSON 30 days; cache headers only on success (no `always`). The security headers are a snippet **included in every location** (an `add_header` in a location drops the server-level ones) |
+| `deploy/docker-compose.yml` | `ghcr.io/zarvi16g/santiagoboada-portfolio:${TAG}` with `TAG` in `/opt/portfolio/.env`; ports `"127.0.0.1:8081:8080"` (never 0.0.0.0: Docker bypasses ufw); `restart: unless-stopped`, `read_only`, tmpfs `/tmp` and `/var/cache/nginx`, `no-new-privileges`, `cap_drop: ALL`, `mem_limit: 128m`, json-file logs 10m × 3, its own network (separate from the finance app) |
+| `deploy/deploy.sh` | in `/opt/portfolio/`, the **only** command the GitHub key can run (`authorized_keys`: `command="/opt/portfolio/deploy.sh",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding`). Takes only a tag from `SSH_ORIGINAL_COMMAND` (or `$1` by hand), validated with `^[0-9]{8}-[0-9]{4}-[0-9a-f]{7}$`; `flock`; saves the previous tag; `docker compose pull` (if it fails nothing changes); `up -d`; waits for `healthy` (60 s); otherwise goes back to the previous tag without pulling; keeps the newest 3 images of this project; logs to `/opt/portfolio/deploy.log` |
+| `deploy/nginx-santiagoboada.conf` | host Nginx: 443 ssl with the GoDaddy certificate (`__SSL_CERT__` / `__SSL_KEY__` placeholders, filled on the server), 80 → https, a separate `www` block → 301 `https://santiagoboada.dev`, `proxy_pass http://127.0.0.1:8081` with Host and X-Forwarded-Proto, `set_real_ip_from` with Cloudflare's official ranges + `real_ip_header CF-Connecting-IP`, HSTS `max-age=31536000` (no includeSubDomains/preload yet), `server_tokens off` |
+| `.github/workflows/deploy.yml` | on `push` of tags `v*` and `workflow_dispatch` (never every push to main). Job build: `permissions: contents read, packages write`, push to GHCR with `GITHUB_TOKEN`, tag `AAAAMMDD-HHMM-<sha7>` (UTC). Job deploy: `environment: production` (Santiago approves), SSH to the VPS **IP** (Cloudflare does not pass SSH) with `known_hosts` from a secret and `StrictHostKeyChecking=yes` (never `no`), then the live check. Every action pinned by full commit SHA |
+| `docs/SERVER-SETUP.md` | Spanish, step by step: diagnosis (read only), backup, `deploy` user (no password, no sudo, docker group), restricted ed25519 key, `/opt/portfolio` (root:deploy 1770, deploy.sh 750), `docker login ghcr.io` with a `read:packages` token, host Nginx (`nginx -t` before reload), secrets, environment, Cloudflare, port 8000, rollback, GoDaddy renewal |
+
+**Secrets** (environment `production` only): `VPS_HOST` (IP), `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS`. Nothing else.
+
+**CSP** (container): `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'`, plus `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()`, `Cross-Origin-Opener-Policy: same-origin`. So: **no inline scripts, no other origin** (fonts self-hosted, see Assets). Before relaxing it, say what broke.
+
+**First deploy order** (the site is never down): run the workflow; when build is done and deploy waits for approval, run `sudo -iu deploy /opt/portfolio/deploy.sh <tag>` on the server; switch the host Nginx to the new block; then approve (same tag again, the check passes).
 
 ## Working rules
 

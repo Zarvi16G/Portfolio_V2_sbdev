@@ -67,6 +67,9 @@ export const BUBBLES = {
   water: { en: 'Water the plant', es: 'Regar la planta' },
   watering: { en: 'Ahh... **glug glug**', es: 'Ahh... **glu glu**' },
   thanks: { en: 'Thank you! I feel **brand new**.', es: '¡Gracias! Me siento **como nueva**.' },
+  // light version: the invisible buttons over the person and the plant
+  personSpot: { en: 'Santiago at his desk: say hi', es: 'Santiago en su escritorio: salúdalo' },
+  plantSpot: { en: 'The plant on the desk', es: 'La planta del escritorio' },
 } satisfies Record<string, L>
 
 // ---- Skills ----

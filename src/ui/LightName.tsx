@@ -1,32 +1,32 @@
 import { useLayoutEffect, useRef } from 'react'
-import { NAME_LINES } from '../data/content'
+import lite from '../data/lite.json'
 import { useUiLayoutVersion } from '../hooks/useUiLayout'
 
-// Light version: the name as HTML text, at the same place and size as the 3D one:
+// Light version: the porcelain name as an image captured from the 3D one, at the same place and size:
 // ~20% of the screen height (16% on phones), within 60% of the width (86% on phones), 14px under the keys.
+const RATIO = lite.name.width / lite.name.height
+
 export function LightName() {
-  const el = useRef<HTMLHeadingElement>(null)
+  const el = useRef<HTMLImageElement>(null)
   const uiLayout = useUiLayoutVersion()
 
   useLayoutEffect(() => {
-    const h1 = el.current
-    if (!h1) return
+    const img = el.current
+    if (!img) return
     const fit = () => {
       const w = innerWidth, h = innerHeight, phone = w < 640
       const keys = document.querySelector('.keys')
-      const top = (keys ? keys.getBoundingClientRect().bottom : 80) + 14
-      // two lines at line-height 1.12 -> 2.24em tall
-      let size = (h * (phone ? 0.16 : 0.2)) / 2.24
-      h1.style.fontSize = `${size}px`
-      const maxW = w * (phone ? 0.86 : 0.6)
-      if (h1.scrollWidth > maxW) size *= maxW / h1.scrollWidth
-      h1.style.fontSize = `${size}px`
-      h1.style.top = `${top}px`
+      const height = Math.min(h * (phone ? 0.16 : 0.2), (w * (phone ? 0.86 : 0.6)) / RATIO)
+      Object.assign(img.style, { height: `${height}px`, width: `${height * RATIO}px`, top: `${(keys ? keys.getBoundingClientRect().bottom : 80) + 14}px` })
     }
     fit()
     addEventListener('resize', fit)
     return () => removeEventListener('resize', fit)
   }, [uiLayout])
 
-  return <h1 ref={el} className="light-name" aria-label="Santiago Boada.dev">{NAME_LINES.map((l) => <span key={l} aria-hidden="true">{l}</span>)}</h1>
+  return (
+    <h1 className="lite-name-wrap">
+      <img ref={el} className="lite-name" src={`/lite/${lite.name.file}`} alt="Santiago Boada.dev" decoding="async" />
+    </h1>
+  )
 }

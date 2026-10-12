@@ -1,7 +1,7 @@
 // Light version for weak devices: decided once on load, before any 3D canvas mounts.
 // Light when: no WebGL2, deviceMemory <= 2, hardwareConcurrency <= 2 or prefers-reduced-data.
 // After mount, a slow first 2 s (< 24 fps average) also switches to light, remembered for the session.
-// Dev overrides: ?light=1 forces light, ?light=0 forces the full version.
+// Overrides: ?quality=lite forces the light version, ?quality=full the 3D one (?light=1 / ?light=0 also work).
 
 const SESSION_KEY = 'sb-light'
 
@@ -10,9 +10,10 @@ export type LightReason = 'forced' | 'no-webgl2' | 'low-memory' | 'few-cores' | 
 export type Quality = { light: boolean; reason: LightReason | null; pinned: boolean }
 
 export function detectQuality(): Quality {
-  const force = new URLSearchParams(location.search).get('light')
-  if (force === '1') return { light: true, reason: 'forced', pinned: true }
-  if (force === '0') return { light: false, reason: null, pinned: true }
+  const params = new URLSearchParams(location.search)
+  const force = params.get('quality') ?? ({ '1': 'lite', '0': 'full' } as Record<string, string>)[params.get('light') ?? '']
+  if (force === 'lite') return { light: true, reason: 'forced', pinned: true }
+  if (force === 'full') return { light: false, reason: null, pinned: true }
 
   try {
     if (sessionStorage.getItem(SESSION_KEY) === 'slow-fps') return { light: true, reason: 'slow-fps', pinned: false }

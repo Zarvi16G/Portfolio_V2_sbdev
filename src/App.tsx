@@ -6,6 +6,7 @@ import { SectionHost, type ActiveSection, type SectionPhase } from './sections/S
 import { CategoryTiles } from './ui/CategoryTiles'
 import { LangToggle } from './ui/LangToggle'
 import { LightName } from './ui/LightName'
+import { LiteRoom } from './ui/LiteRoom'
 import { SectionKeys, type KeyRect } from './ui/SectionKeys'
 import { SpeechBubbles } from './ui/SpeechBubble'
 
@@ -33,12 +34,14 @@ export default function App() {
 
   return (
     <>
-      {light ? <div className="light-bg" aria-hidden="true" /> : <Suspense fallback={null}><RoomCanvas paused={paused} onReady={onRoomReady} /></Suspense>}
+      {!light && <Suspense fallback={null}><RoomCanvas paused={paused} onReady={onRoomReady} /></Suspense>}
       {light ? <LightName /> : <><h1 className="sr-only">Santiago Boada.dev</h1><Suspense fallback={null}><NameCanvas paused={paused} /></Suspense></>}
       <SectionKeys onOpen={open} disabled={uiHidden} hiddenKey={active?.id ?? null} />
       <CategoryTiles hidden={uiHidden} />
+      {/* after the keys and tiles in the DOM, so the person / plant buttons come later in the tab order */}
+      {light && <LiteRoom hidden={uiHidden} />}
       <LangToggle placement="corner" hidden={uiHidden} />
-      {!light && <SpeechBubbles enabled={!active} />}
+      <SpeechBubbles enabled={!active} />
       <SectionHost active={active} phase={phase} light={light} onPhase={setPhase} onClosed={closed} />
     </>
   )

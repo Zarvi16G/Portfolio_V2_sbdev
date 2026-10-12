@@ -51,14 +51,16 @@ export function SpeechBubbles({ enabled }: { enabled: boolean }) {
   // clicks and the "help" cursor over the person / plant; Esc closes
   useEffect(() => {
     if (!enabled) { hide(); return }
-    const inRoom = (target: EventTarget | null) => target instanceof Element && !!target.closest('.room-canvas, .name-canvas')
+    const inRoom = (target: EventTarget | null) => target instanceof Element && !!target.closest('.room-canvas, .name-canvas, .lite-room')
     const onClick = (e: MouseEvent) => {
       if (!inRoom(e.target)) return
-      const kind = roomBridge.pick?.(e.clientX, e.clientY)
+      // light version: the invisible buttons over the person / plant (also reached with the keyboard)
+      const spot = (e.target as Element).closest<HTMLElement>('[data-bubble]')
+      const kind = (spot?.dataset.bubble as SetupKind | undefined) ?? roomBridge.pick?.(e.clientX, e.clientY)
       if (kind) { e.stopPropagation(); e.preventDefault(); show(kind) } else hide()
     }
     const onMove = (e: PointerEvent) => {
-      const name = document.querySelector<HTMLElement>('.name-canvas')
+      const name = document.querySelector<HTMLElement>('.name-canvas')   // light version: the buttons have cursor: help
       if (!name || !inRoom(e.target)) return
       name.style.cursor = roomBridge.pick?.(e.clientX, e.clientY) ? 'help' : ''
     }

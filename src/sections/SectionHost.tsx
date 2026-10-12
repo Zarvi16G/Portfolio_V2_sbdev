@@ -24,12 +24,12 @@ const keyEl = (id: SectionId) => document.querySelector<HTMLElement>(`.key[data-
 
 // the portfolio behind (room + name, or the light version's background + name) zooms toward the key and fades
 function zoomPortfolio(open: boolean, origin?: KeyRect) {
-  const bg = document.querySelector<HTMLElement>('.room-canvas, .light-bg')
-  const name = document.querySelector<HTMLElement>('.name-canvas, .light-name')
+  const bg = document.querySelector<HTMLElement>('.room-canvas, .lite-room')
+  const name = document.querySelector<HTMLElement>('.name-canvas, .lite-name')
   if (!bg || !name) return
   if (origin) {
     const o = `${(((origin.left + origin.width / 2) / innerWidth) * 100).toFixed(1)}% ${(((origin.top + origin.height / 2) / innerHeight) * 100).toFixed(1)}%`
-    if (name.classList.contains('light-name')) {
+    if (name.classList.contains('lite-name')) {
       // the light name is centered with a transform: put the origin in its own box
       const r = name.getBoundingClientRect()
       name.style.transformOrigin = `${origin.left + origin.width / 2 - r.left}px ${origin.top + origin.height / 2 - r.top}px`

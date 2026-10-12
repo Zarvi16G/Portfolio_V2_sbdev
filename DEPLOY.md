@@ -51,6 +51,6 @@ Steps 1 and 2 only. `index.html` is served with `Cache-Control: no-cache`, so a 
 |---|---|---|
 | `/`, `/index.html` | `no-cache` | unknown paths fall back to `index.html` |
 | `/assets/*` | 1 year, immutable | a missing file is a 404, not the page |
-| `*.svg, *.ico, *.png, *.json` | 30 days | favicons and the 3D font |
+| `*.svg, *.ico, *.png, *.webp, *.json` | 30 days | favicons, the light version images and the 3D font |
 
 Gzip is on for CSS, JS, JSON and SVG. Checked with `nginx -t` and served from a local `nginx:1.27` container.
